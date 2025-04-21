@@ -53,7 +53,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryEntity> searchCategoriesByName(String name) {
-        return categoryRepository.findByNameContaining(name);
+        return categoryRepository.findByNameContainingIgnoreCase(name);
     }
 
     @Override
@@ -75,16 +75,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void updateCategory(CategoryEntity category) {
-        if (category != null) {
+        if (category != null && categoryRepository.existsById(category.getId())) {
             categoryRepository.save(category);
+        } else {
+            System.out.println("Category not found or null, cannot update: " + (category != null ? category.getId() : "null"));
         }
     }
 
     @Override
     public void deleteCategory(int id) {
-        if (id > 0) {
-            categoryRepository.deleteById(id);
-        }
+        categoryRepository.deleteById(id);
     }
 
     @Override
@@ -490,5 +490,18 @@ public class CategoryServiceImpl implements CategoryService {
             default:
                 return true;
         }
+    }
+
+    @Override
+    @Transactional
+    public CategoryEntity findOrCreateCategory(String name) {
+        return categoryRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> {
+                    System.out.println("Creating new category: " + name);
+                    CategoryEntity newCategory = new CategoryEntity();
+                    newCategory.setName(name);
+                    newCategory.setStatus(1);
+                    return categoryRepository.save(newCategory);
+                });
     }
 }

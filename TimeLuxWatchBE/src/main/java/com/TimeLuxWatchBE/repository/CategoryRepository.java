@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import com.TimeLuxWatchBE.entity.CategoryEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<CategoryEntity, Integer> {
@@ -25,4 +26,10 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Intege
      * @return Danh sách danh mục
      */
     List<CategoryEntity> findByNameContaining(String name);
+
+    // Method to find categories containing a name (case-insensitive) - for search
+    List<CategoryEntity> findByNameContainingIgnoreCase(String name);
+
+    // Method to find a category by exact name (case-insensitive) - for findOrCreate
+    Optional<CategoryEntity> findByNameIgnoreCase(String name);
 }

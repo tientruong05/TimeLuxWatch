@@ -9,9 +9,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Map /photos/** URL pattern to the correct images directory in resources/static
+        // Map /photos/** URL pattern back to the classpath location
         registry.addResourceHandler("/photos/**")
-                .addResourceLocations("classpath:/static/photos/")
+                .addResourceLocations("classpath:/static/photos/") // Reverted to classpath
                 .setCachePeriod(3600) // Cache for 1 hour (3600 seconds)
                 .resourceChain(true); // Enable the resource chain for better performance
     }

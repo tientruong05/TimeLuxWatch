@@ -201,7 +201,8 @@ public class CartServiceImpl implements CartService {
             orderDetailService.save(orderDetail);
             
             // Remove item from cart
-            deleteCartItem(item.getId());
+            cartRepository.deleteById(item.getId());
+            System.out.println("Removed cart item ID: " + item.getId() + " for order ID: " + order.getId()); // Optional log
         });
     }
     

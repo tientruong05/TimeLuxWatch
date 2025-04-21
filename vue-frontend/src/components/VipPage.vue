@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="container">
     <div class="section">
       <div class="container1">
         <h1>10 KHÁCH HÀNG CỦA NĂM</h1>

@@ -32,6 +32,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.regex.Pattern;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -223,17 +226,36 @@ public class AuthApiController {
     }
 
     @GetMapping("/activate")
-    public ResponseEntity<Map<String, Object>> activateAccount(@RequestParam String email) {
-        Map<String, Object> response = new HashMap<>();
+    public ResponseEntity<Void> activateAccount(@RequestParam String email) {
         UserEntity user = userRepository.findByEmail(email);
+        String redirectUrlBase = "http://localhost:5173/login";
+        String message;
+        String statusParam;
+
         if (user != null) {
-            user.setStatus(true);
-            userRepository.save(user);
-            response.put("message", "Tài khoản đã được kích hoạt thành công! Bạn có thể đăng nhập ngay.");
-            return ResponseEntity.ok(response);
+            if (user.isStatus()) {
+                message = "Tài khoản của bạn đã được kích hoạt trước đó.";
+                statusParam = "info";
+            } else {
+                user.setStatus(true);
+                userRepository.save(user);
+                message = "Tài khoản đã được kích hoạt thành công! Bạn có thể đăng nhập ngay.";
+                statusParam = "success";
+            }
+        } else {
+            message = "Liên kết kích hoạt không hợp lệ hoặc đã hết hạn.";
+            statusParam = "error";
         }
-        response.put("error", "Liên kết kích hoạt không hợp lệ!");
-        return ResponseEntity.badRequest().body(response);
+
+        String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
+        String redirectUrl = String.format("%s?activation=%s&message=%s",
+                                            redirectUrlBase,
+                                            statusParam,
+                                            encodedMessage);
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+                             .location(URI.create(redirectUrl))
+                             .build();
     }
 
     @GetMapping("/logout")

@@ -18,12 +18,17 @@ import com.TimeLuxWatchBE.service.CartService;
 import com.TimeLuxWatchBE.service.OrderService;
 import com.TimeLuxWatchBE.service.OrderDetailService;
 import com.TimeLuxWatchBE.service.ProductService;
+import com.TimeLuxWatchBE.service.DiscountService;
+import com.TimeLuxWatchBE.repository.DiscountRepository;
+import com.TimeLuxWatchBE.entity.DiscountEntity;
+import com.TimeLuxWatchBE.entity.ProductEntity;
+import com.TimeLuxWatchBE.repository.ProductRepository;
+import java.util.Optional;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,11 +38,17 @@ public class CartApiController {
     @Autowired
     private CartService cartService;
     @Autowired
+    private ProductRepository productRepository;
+    @Autowired
     private ProductService productService;
     @Autowired
     private OrderService orderService;
     @Autowired
     private OrderDetailService orderDetailService;
+    @Autowired
+    private DiscountService discountService;
+    @Autowired
+    private DiscountRepository discountRepository;
 
     @GetMapping("/view")
     public ResponseEntity<Map<String, Object>> viewCart(HttpSession session) {
@@ -45,8 +56,45 @@ public class CartApiController {
         return Optional.ofNullable((UserEntity) session.getAttribute("user"))
                 .map(user -> {
                     List<CartDetailDTO> cartItemDTOs = cartService.getCartDetailsByUserId(user.getId());
+
+                    for (CartDetailDTO dto : cartItemDTOs) {
+                        Optional<ProductEntity> productOpt = productRepository.findById(dto.getProductId());
+                        if (productOpt.isEmpty()) {
+                            dto.setPrice(0f);
+                            dto.setDiscountedPrice(0f);
+                            dto.setProductName(dto.getProductName() + " (Không còn tồn tại)");
+                            continue;
+                        }
+                        ProductEntity product = productOpt.get();
+
+                        float originalPrice = product.getPrice();
+                        dto.setPrice(originalPrice);
+
+                        Integer categoryId = (product.getSubCategory() != null && product.getSubCategory().getCategory() != null)
+                                ? product.getSubCategory().getCategory().getId() : null;
+                        Integer subCategoryId = (product.getSubCategory() != null)
+                                ? product.getSubCategory().getId() : null;
+
+                        List<DiscountEntity> activeDiscounts = discountRepository.findAllActiveDiscountsForProduct(
+                                product.getId(), categoryId, subCategoryId);
+
+                        Optional<DiscountEntity> bestDiscount = activeDiscounts.stream()
+                                .max((d1, d2) -> Float.compare(d1.getDiscountValue(), d2.getDiscountValue()));
+
+                        if (bestDiscount.isPresent()) {
+                            float discountValue = bestDiscount.get().getDiscountValue();
+                            float currentDiscountedPrice = originalPrice * (1 - discountValue / 100);
+                            dto.setDiscountedPrice(currentDiscountedPrice);
+                        } else {
+                            dto.setDiscountedPrice(originalPrice);
+                        }
+                        dto.setAvailableQty(product.getQty());
+                    }
+
                     int cartCount = cartService.getCartCount(user.getId());
-                    double total = cartService.calculateCartTotal(cartItemDTOs);
+                    double total = cartItemDTOs.stream()
+                            .mapToDouble(CartDetailDTO::getDiscountedPrice)
+                            .sum();
 
                     response.put("cartItems", cartItemDTOs);
                     response.put("total", total);
@@ -119,12 +167,17 @@ public class CartApiController {
     @GetMapping("/count")
     public ResponseEntity<Map<String, Object>> getCartCount(HttpSession session) {
         Map<String, Object> response = new HashMap<>();
-        return Optional.ofNullable((UserEntity) session.getAttribute("user"))
-                .map(user -> {
-                    response.put("count", cartService.getCartCount(user.getId()));
-                    return ResponseEntity.ok(response);
-                })
-                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null));
+        UserEntity user = (UserEntity) session.getAttribute("user");
+        if (user == null) {
+            response.put("error", "Authentication required");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+        
+        // Ensure we get the most up-to-date count directly from the repository
+        int cartCount = cartService.getCartCount(user.getId());
+        response.put("count", cartCount);
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/checkout")

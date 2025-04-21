@@ -53,8 +53,12 @@
                   {{ errors.confirmPassword }}
                 </div>
               </div>
-              <button @click="changePassword" class="primary-btn w-100">
-                Đổi mật khẩu
+              <button
+                @click="changePassword"
+                class="primary-btn w-100"
+                :disabled="isLoggingOut"
+              >
+                {{ isLoggingOut ? "Đang xử lý..." : "Đổi mật khẩu" }}
               </button>
             </div>
           </div>
@@ -66,6 +70,7 @@
 
 <script>
 import apiClient from "@/services/api";
+import { useAuthStore } from "@/stores/auth";
 
 export default {
   name: "PasswordChange",
@@ -81,7 +86,15 @@ export default {
         newPassword: "",
         confirmPassword: "",
       },
+      isLoggingOut: false,
+      countdownSeconds: 0,
+      countdownInterval: null,
     };
+  },
+  beforeUnmount() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
   },
   methods: {
     validateForm() {
@@ -122,7 +135,9 @@ export default {
       return isValid;
     },
     async changePassword() {
-      if (!this.validateForm()) return;
+      if (!this.validateForm() || this.isLoggingOut) return;
+
+      this.isLoggingOut = true;
 
       try {
         const formData = new URLSearchParams();
@@ -140,12 +155,43 @@ export default {
           }
         );
 
-        this.successMessage =
-          response.data.message || "Đổi mật khẩu thành công!";
         this.errorMessage = "";
         this.currentPassword = "";
         this.newPassword = "";
         this.confirmPassword = "";
+
+        this.countdownSeconds = 3;
+        this.successMessage = `Đổi mật khẩu thành công! Tự động đăng xuất sau ${this.countdownSeconds}s, vui lòng đăng nhập lại.`;
+
+        if (this.countdownInterval) {
+          clearInterval(this.countdownInterval);
+        }
+
+        this.countdownInterval = setInterval(async () => {
+          this.countdownSeconds--;
+          if (this.countdownSeconds > 0) {
+            this.successMessage = `Đổi mật khẩu thành công! Tự động đăng xuất sau ${this.countdownSeconds}s, vui lòng đăng nhập lại.`;
+          } else {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+            this.successMessage = "Đang đăng xuất...";
+
+            const authStore = useAuthStore();
+            try {
+              console.log(
+                "Automatic logout initiated after password change countdown."
+              );
+              await authStore.logout();
+              this.$router.push({ name: "LoginRegister" });
+            } catch (logoutError) {
+              console.error("Error during automatic logout:", logoutError);
+              this.errorMessage =
+                "Đổi mật khẩu thành công, nhưng có lỗi khi tự động đăng xuất.";
+              this.isLoggingOut = false;
+              this.$router.push({ name: "LoginRegister" });
+            }
+          }
+        }, 1000);
       } catch (error) {
         console.error("Change password error:", error.response || error);
         this.successMessage = "";
@@ -162,6 +208,7 @@ export default {
           this.errorMessage =
             "Có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại.";
         }
+        this.isLoggingOut = false;
       }
     },
   },

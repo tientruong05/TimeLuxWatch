@@ -53,20 +53,18 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
     @Query("SELECT p FROM ProductEntity p WHERE p.name LIKE CONCAT('%', ?1, '%') AND p.status = 1")
     Page<ProductEntity> findSearchAll(String name, Pageable pageable);
 
-    @Query("SELECT p FROM ProductEntity p " +
-           "WHERE (:search IS NULL OR " +
-           "       p.name LIKE CONCAT('%', :search, '%') OR " +
-           "       p.subCategory.category.name LIKE CONCAT('%', :search, '%') OR " +
-           "       p.subCategory.subCategoriesName LIKE CONCAT('%', :search, '%')) " +
-           "AND (:categoryId IS NULL OR p.subCategory.category.id = :categoryId) " +
-           "AND (:subCategoryId IS NULL OR p.subCategory.id = :subCategoryId) " +
-           "AND (:status IS NULL OR p.status = :status)")
-    Page<ProductEntity> findByFilters(
-            @Param("search") String search,
-            @Param("categoryId") Integer categoryId,
-            @Param("subCategoryId") Integer subCategoryId,
-            @Param("status") Integer status,
-            Pageable pageable);
+    @Query("SELECT p FROM ProductEntity p WHERE " +
+           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.category.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.subCategoriesName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:categoryId IS NULL OR p.subCategory.category.id = :categoryId) AND " +
+           "(:gender IS NULL OR p.subCategory.subCategoriesName = :gender) AND " +
+           "(:status IS NULL OR p.status = :status)")
+    Page<ProductEntity> findByFilters(@Param("search") String search,
+                                      @Param("categoryId") Integer categoryId,
+                                      @Param("gender") String gender,
+                                      @Param("status") Integer status,
+                                      Pageable pageable);
 
     // Truy vấn sản phẩm có discount đang hoạt động
     @Query("SELECT p FROM ProductEntity p " +
@@ -94,17 +92,18 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
     @Query("SELECT p FROM ProductEntity p WHERE p.status = 1")
     Page<ProductEntity> findAllActive(Pageable pageable);
 
-    @Query("SELECT p FROM ProductEntity p WHERE p.status = 1 " +
-           "AND (:search IS NULL OR p.name LIKE CONCAT('%', :search, '%')) " +
-           "AND (:gender IS NULL OR p.subCategory.subCategoriesName = :gender) " +
-           "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
-           "AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<ProductEntity> findAllWithFilters(
-            @Param("search") String search,
-            @Param("gender") String gender,
-            @Param("minPrice") Float minPrice,
-            @Param("maxPrice") Float maxPrice,
-            Pageable pageable);
+    @Query("SELECT p FROM ProductEntity p WHERE " +
+           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.category.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.subCategoriesName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:gender IS NULL OR p.subCategory.subCategoriesName = :gender) AND " +
+           "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+           "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<ProductEntity> findAllWithFilters(@Param("search") String search,
+                                           @Param("gender") String gender,
+                                           @Param("minPrice") Float minPrice,
+                                           @Param("maxPrice") Float maxPrice,
+                                           Pageable pageable);
 
     @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.id = :subCategoryId AND p.status = 1")
     Page<ProductEntity> findBySubCategoryIdAndStatusActive(@Param("subCategoryId") int subCategoryId, Pageable pageable);
@@ -128,18 +127,19 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
     @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.category.id = :categoryId AND p.status = 1")
     Page<ProductEntity> findByCategoryIdAndStatusActive(@Param("categoryId") int categoryId, Pageable pageable);
 
-    @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.category.id = :categoryId AND p.status = 1 " +
-           "AND (:search IS NULL OR p.name LIKE CONCAT('%', :search, '%')) " +
-           "AND (:gender IS NULL OR p.subCategory.subCategoriesName = :gender) " +
-           "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
-           "AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<ProductEntity> findByCategoryIdWithFilters(
-            @Param("categoryId") int categoryId,
-            @Param("search") String search,
-            @Param("gender") String gender,
-            @Param("minPrice") Float minPrice,
-            @Param("maxPrice") Float maxPrice,
-            Pageable pageable);
+    @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.category.id = :categoryId " +
+           "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.category.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.subCategoriesName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:gender IS NULL OR p.subCategory.subCategoriesName = :gender) AND " +
+           "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+           "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<ProductEntity> findByCategoryIdWithFilters(@Param("categoryId") int categoryId,
+                                                    @Param("search") String search,
+                                                    @Param("gender") String gender,
+                                                    @Param("minPrice") Float minPrice,
+                                                    @Param("maxPrice") Float maxPrice,
+                                                    Pageable pageable);
 
     @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.id IN :subCategoryIds AND p.status = 1")
     List<ProductEntity> findBySubCategoryIdsAndStatusActive(@Param("subCategoryIds") List<Integer> subCategoryIds);
@@ -147,32 +147,32 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
     @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.id IN :subCategoryIds AND p.status = 1")
     Page<ProductEntity> findBySubCategoryIdsAndStatusActive(@Param("subCategoryIds") List<Integer> subCategoryIds, Pageable pageable);
 
-    @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.id IN :subCategoryIds AND p.status = 1 " +
-           "AND (:search IS NULL OR p.name LIKE CONCAT('%', :search, '%')) " +
-           "AND (:gender IS NULL OR p.subCategory.subCategoriesName = :gender) " +
-           "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
-           "AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<ProductEntity> findBySubCategoryIdsWithFilters(
-            @Param("subCategoryIds") List<Integer> subCategoryIds,
-            @Param("search") String search,
-            @Param("gender") String gender,
-            @Param("minPrice") Float minPrice,
-            @Param("maxPrice") Float maxPrice,
-            Pageable pageable);
+    @Query("SELECT p FROM ProductEntity p WHERE p.subCategory.id IN :subCategoryIds " +
+           "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.category.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.subCategoriesName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:gender IS NULL OR p.subCategory.subCategoriesName = :gender) AND " +
+           "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+           "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<ProductEntity> findBySubCategoryIdsWithFilters(@Param("subCategoryIds") List<Integer> subCategoryIds,
+                                                        @Param("search") String search,
+                                                        @Param("gender") String gender,
+                                                        @Param("minPrice") Float minPrice,
+                                                        @Param("maxPrice") Float maxPrice,
+                                                        Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM ProductEntity p " +
-           "JOIN p.discountDetails dd " +
-           "JOIN dd.discount d " +
-           "WHERE p.status = 1 AND dd.status = 1 AND d.status = 1 " +
-           "AND d.startDate <= CURRENT_DATE AND d.endDate >= CURRENT_DATE " +
-           "AND (:search IS NULL OR p.name LIKE CONCAT('%', :search, '%')) " +
-           "AND (:gender IS NULL OR p.subCategory.subCategoriesName = :gender) " +
-           "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
-           "AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<ProductEntity> findDiscountedProductsWithFilters(
-            @Param("search") String search,
-            @Param("gender") String gender,
-            @Param("minPrice") Float minPrice,
-            @Param("maxPrice") Float maxPrice,
-            Pageable pageable);
+           "JOIN DiscountDetailEntity d ON (d.product = p OR d.category = p.subCategory.category OR d.subCategory = p.subCategory) " +
+           "WHERE d.discount.status = 1 AND CURRENT_TIMESTAMP BETWEEN d.discount.startDate AND d.discount.endDate " +
+           "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.category.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.subCategory.subCategoriesName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:gender IS NULL OR p.subCategory.subCategoriesName = :gender) AND " +
+           "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+           "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<ProductEntity> findDiscountedProductsWithFilters(@Param("search") String search,
+                                                          @Param("gender") String gender,
+                                                          @Param("minPrice") Float minPrice,
+                                                          @Param("maxPrice") Float maxPrice,
+                                                          Pageable pageable);
 }

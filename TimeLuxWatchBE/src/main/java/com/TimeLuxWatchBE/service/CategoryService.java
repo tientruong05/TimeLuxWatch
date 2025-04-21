@@ -6,6 +6,7 @@ import com.TimeLuxWatchBE.entity.CategoryEntity;
 import com.TimeLuxWatchBE.entity.ProductEntity;
 import com.TimeLuxWatchBE.dto.ProductDTO;
 import java.util.List;
+import java.util.Optional;
 
 public interface CategoryService {
     List<ProductEntity> getProductsBySubCategory(int subCategoryId);
@@ -28,4 +29,5 @@ public interface CategoryService {
 	ProductEntity getProductById1(Integer productId);
 	ProductEntity getProductById(Integer productId);
     Page<ProductDTO> getDiscountedProducts(String search, String gender, String priceRange, Pageable pageable);
+    CategoryEntity findOrCreateCategory(String name);
 }

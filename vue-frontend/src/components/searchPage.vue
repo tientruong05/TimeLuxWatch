@@ -121,49 +121,53 @@ const countdownInterval = ref(null);
 const fetchData = async () => {
   loading.value = true;
   error.value = null;
-  products.value = []; // Clear previous results
+  // Do NOT clear products.value here, let it display old results while loading
+
+  // Ensure currentPage is a valid number before API call
+  const pageToFetch = Number.isInteger(currentPage.value)
+    ? currentPage.value
+    : 0;
 
   try {
     const response = await apiClient.get("/home/search", {
       params: {
         q: searchQuery.value,
-        page: currentPage.value,
+        page: pageToFetch, // Use the validated page number
         size: pageSize.value,
       },
     });
     // Correctly access the products array from the response
-    products.value = response.data.products || []; // Use 'products' key
+    products.value = response.data.products || []; // Update products
     totalPages.value = response.data.totalPages || 0;
-    // Flash sale logic might need adjustment or removal if not part of this endpoint
-    // isFlashSaleActive.value = response.data.isFlashSaleActive || false;
-    // flashSaleEndTime.value = response.data.flashSaleEndTime || null;
 
-    if (isFlashSaleActive.value && flashSaleEndTime.value) {
-      startCountdown();
-    }
-
-    // Validate currentPage after fetching data
-    if (currentPage.value >= totalPages.value && totalPages.value > 0) {
+    // Validate currentPage against the *new* totalPages
+    if (pageToFetch >= totalPages.value && totalPages.value > 0) {
+      console.warn(
+        `Requested page ${pageToFetch} is out of bounds (total: ${totalPages.value}). Correcting...`
+      );
       currentPage.value = totalPages.value - 1;
-      // Optionally refetch data for the last page or update URL
-      // await fetchData(); // Be cautious of infinite loops
-      updateRoute(); // Update URL to reflect valid page
-    } else if (currentPage.value < 0 && totalPages.value > 0) {
+      // Need to update URL and potentially refetch if correction happened
+      // To avoid refetch loop, only update route if needed
+      if (currentPage.value !== pageToFetch) {
+        updateRoute(); // Update URL, watcher will trigger refetch if needed
+      }
+    } else if (pageToFetch < 0 && totalPages.value > 0) {
       currentPage.value = 0;
-      updateRoute(); // Update URL to reflect valid page
+      if (currentPage.value !== pageToFetch) {
+        updateRoute();
+      }
     }
   } catch (err) {
     console.error("Error fetching search results:", err);
     error.value = "Không thể tải kết quả tìm kiếm. Vui lòng thử lại sau.";
+    products.value = []; // Clear products on error
+    totalPages.value = 0;
     // Handle specific error types if needed
     if (err.response) {
-      // Server responded with a status code outside 2xx range
       error.value += ` (Lỗi: ${err.response.status})`;
     } else if (err.request) {
-      // Request was made but no response received
       error.value = "Không nhận được phản hồi từ máy chủ.";
     } else {
-      // Something else happened in setting up the request
       error.value = `Lỗi: ${err.message}`;
     }
   } finally {
@@ -172,109 +176,97 @@ const fetchData = async () => {
 };
 
 const updateRoute = () => {
-  router
-    .push({
-      name: "SearchResults", // Use the route name defined in main.js
-      query: {
-        q: searchQuery.value,
-        page: currentPage.value,
-        size: pageSize.value,
-      },
-    })
-    .catch((err) => {
-      // Optional: Catch navigation errors, e.g., NavigationDuplicated
-      if (err.name !== "NavigationDuplicated") {
-        console.error("Navigation Error:", err);
-      }
-    });
+  // Only push if query params actually change to avoid duplicate navigation errors
+  const currentQuery = route.query;
+  const newQuery = {
+    q: searchQuery.value,
+    page: currentPage.value,
+    size: pageSize.value,
+  };
+
+  // Simple comparison (might need deeper comparison for complex objects)
+  if (JSON.stringify(currentQuery) !== JSON.stringify(newQuery)) {
+    router
+      .push({
+        name: "SearchResults", // Use the route name defined in main.js
+        query: newQuery,
+      })
+      .catch((err) => {
+        if (err.name !== "NavigationDuplicated") {
+          console.error("Navigation Error:", err);
+        }
+      });
+  }
 };
 
 const changePage = (page) => {
+  // page is 0-indexed
   if (page >= 0 && page < totalPages.value && page !== currentPage.value) {
-    currentPage.value = page;
-    updateRoute(); // Update URL which triggers the watcher
+    currentPage.value = page; // Update state FIRST
+    updateRoute(); // THEN update the URL (watcher will handle fetch)
   }
 };
 
 // Watch for changes in route query parameters (e.g., search term or page number)
 watch(
   () => route.query,
-  (newQuery) => {
-    searchQuery.value = newQuery.q || "";
+  (newQuery, oldQuery) => {
+    const newSearch = newQuery.q || "";
     const newPage = parseInt(newQuery.page || "0");
-    const newSize = parseInt(newQuery.size || "12");
+    const newSize = parseInt(newQuery.size || String(pageSize.value)); // Use current pageSize as default
 
-    // Only fetch data if relevant parameters change
-    if (
-      newPage !== currentPage.value ||
-      newSize !== pageSize.value ||
-      searchQuery.value !== (route.query.q || "")
-    ) {
-      currentPage.value = newPage;
-      pageSize.value = newSize;
+    const oldSearch = oldQuery?.q || "";
+    const oldPage = parseInt(oldQuery?.page || "0");
+    const oldSize = parseInt(oldQuery?.size || String(pageSize.value));
+
+    // Update state based on new query
+    searchQuery.value = newSearch;
+    currentPage.value = newPage;
+    pageSize.value = newSize;
+
+    // Fetch data only if relevant parameters changed
+    if (newSearch !== oldSearch || newPage !== oldPage || newSize !== oldSize) {
       fetchData();
     }
   },
-  { deep: true } // Watch nested properties if needed, though query is usually flat
+  { deep: true, immediate: true } // immediate: true to fetch on initial load
 );
 
-// Pagination logic for displaying page numbers
+// Simplified Pagination logic for displaying page numbers
 const visiblePages = computed(() => {
   const pages = [];
-  const maxVisible = 5; // Max number of page links shown (excluding prev/next, including ellipsis)
-  const halfVisible = Math.floor(maxVisible / 2);
+  const total = totalPages.value;
+  const current = currentPage.value;
+  const maxVisible = 5;
 
-  if (totalPages.value <= maxVisible) {
-    for (let i = 1; i <= totalPages.value; i++) {
-      pages.push(i);
-    }
+  if (total <= 1) return [];
+
+  if (total <= maxVisible) {
+    for (let i = 1; i <= total; i++) pages.push(i);
   } else {
-    // Always show first page
     pages.push(1);
+    let start = Math.max(2, current - 1);
+    let end = Math.min(total - 1, current + 3);
 
-    let startPage = Math.max(2, currentPage.value - halfVisible + 2);
-    let endPage = Math.min(
-      totalPages.value - 1,
-      currentPage.value + halfVisible + 1
-    );
-
-    // Adjust start/end if near beginning or end
-    if (currentPage.value < halfVisible) {
-      endPage = Math.min(totalPages.value - 1, maxVisible - 1);
-    } else if (currentPage.value >= totalPages.value - halfVisible - 1) {
-      startPage = Math.max(2, totalPages.value - maxVisible + 2);
+    if (current < 3) {
+      end = Math.min(total - 1, maxVisible - 1); // Adjust end if near start
+    }
+    if (current > total - 4) {
+      start = Math.max(2, total - maxVisible + 2); // Adjust start if near end
     }
 
-    // Add ellipsis before middle pages if needed
-    if (startPage > 2) {
-      pages.push("...");
-    }
-
-    // Add middle pages
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    // Add ellipsis after middle pages if needed
-    if (endPage < totalPages.value - 1) {
-      pages.push("...");
-    }
-
-    // Always show last page
-    pages.push(totalPages.value);
+    if (start > 2) pages.push("...");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push("...");
+    pages.push(total);
   }
-
   return pages;
 });
 
-// Fetch data when the component is first mounted
-onMounted(() => {
-  // Update refs from initial route query just in case
-  searchQuery.value = route.query.q || "";
-  currentPage.value = parseInt(route.query.page || "0");
-  pageSize.value = parseInt(route.query.size || "12");
-  fetchData();
-});
+// Remove the onMounted hook as the watcher with immediate: true handles initial load
+// onMounted(() => {
+//   fetchData();
+// });
 
 const startCountdown = () => {
   if (!flashSaleEndTime.value) return;

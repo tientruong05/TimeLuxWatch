@@ -1,6 +1,6 @@
 <template>
   <div class="container py-5">
-    <h1>Thống kê doanh thu theo loại hàng</h1>
+    <h1>Thống kê doanh thu theo thương hiệu</h1>
 
     <!-- Loading Indicator -->
     <div v-if="isLoading" class="text-center my-5">
@@ -22,7 +22,7 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Tên loại hàng</th>
+            <th>Tên thương hiệu</th>
             <th>Tổng doanh thu</th>
             <th>Tổng số lượng</th>
             <th>Giá cao nhất</th>

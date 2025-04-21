@@ -32,7 +32,7 @@ public interface ProductService {
     Page<ProductEntity> getAllProducts(Pageable pageable);
     Page<ProductEntity> searchProducts(String search, Pageable pageable);
     Page<ProductEntity> findSearchAll(String name, Pageable pageable);
-    Page<ProductDTO> getFilteredProducts(String search, Integer categoryId, Integer subCategoryId, Integer status, Pageable pageable);
+    Page<ProductDTO> getFilteredProducts(String search, Integer categoryId, String gender, Integer status, Pageable pageable);
     boolean isFlashSaleActive();
     LocalDateTime getFlashSaleEndTime();
     ProductDetailResponseDTO getProductDetailAndRelated(int id);

@@ -12,6 +12,8 @@ export const useAuthStore = defineStore("auth", {
       : 0,
     loading: false,
     error: null,
+    justCheckedOut: false,
+    isAuthCheckPending: false,
   }),
 
   // Getters: Các trạng thái được tính toán
@@ -125,10 +127,47 @@ export const useAuthStore = defineStore("auth", {
       localStorage.setItem("cartCount", count.toString());
     },
 
+    // New method to refresh cart count from server
+    async refreshCartCount() {
+      try {
+        const response = await apiClient.get("/cart/count");
+        if (response.data && response.data.count !== undefined) {
+          console.log(
+            `auth.js: Refreshing cartCount from server: ${response.data.count}`
+          );
+          this.cartCount = response.data.count;
+          localStorage.setItem("cartCount", this.cartCount.toString());
+        }
+        return this.cartCount;
+      } catch (error) {
+        console.error("Error refreshing cart count:", error);
+        // Don't change the existing count on error
+        return this.cartCount;
+      }
+    },
+
     // Kiểm tra trạng thái đăng nhập từ server
     async checkAuthStatus() {
+      if (this.isAuthCheckPending) {
+        console.log(
+          "auth.js: Auth check skipped because isAuthCheckPending is true."
+        );
+        return this.isLoggedIn();
+      }
+
       try {
         console.log("Checking auth status with backend...");
+        if (this.justCheckedOut) {
+          console.log(
+            "auth.js: Skipping cartCount update check immediately after checkout."
+          );
+          this.justCheckedOut = false;
+        } else {
+          console.log(
+            "auth.js: Not just checked out, proceeding with normal check."
+          );
+        }
+
         console.log("Cookie available:", document.cookie);
 
         // Thử gọi API check-auth
@@ -163,9 +202,20 @@ export const useAuthStore = defineStore("auth", {
 
           // Nếu có thông tin giỏ hàng, cập nhật
           if (response.data.cartCount !== undefined) {
-            this.cartCount = response.data.cartCount;
-            localStorage.setItem("cartCount", this.cartCount.toString());
-            console.log("Updated cart count:", this.cartCount);
+            if (
+              !this.justCheckedOut &&
+              this.cartCount !== response.data.cartCount
+            ) {
+              console.log(
+                `auth.js: Updating cartCount from ${this.cartCount} to ${response.data.cartCount} based on checkAuthStatus`
+              ); // Log change
+              this.cartCount = response.data.cartCount;
+              localStorage.setItem("cartCount", this.cartCount.toString());
+            } else {
+              console.log(
+                `auth.js: Cart count from checkAuthStatus (${response.data.cartCount}) matches store. No update needed.`
+              ); // Log no change
+            }
           }
 
           // Lưu thông tin người dùng đã cập nhật
@@ -217,6 +267,8 @@ export const useAuthStore = defineStore("auth", {
     clearUserData() {
       this.user = null;
       this.cartCount = 0;
+      this.justCheckedOut = false;
+      this.isAuthCheckPending = false;
       localStorage.removeItem("user");
       localStorage.removeItem("cartCount");
       console.log("User data cleared from store and localStorage");

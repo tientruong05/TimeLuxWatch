@@ -37,24 +37,20 @@
       </div>
 
       <div class="search-filter-container mb-4">
-        <form @submit.prevent="applyFilters" class="row g-3">
+        <form @submit.prevent="applyFilters" class="row g-3 align-items-center">
           <input type="hidden" name="page" :value="pagination.currentPage" />
           <input type="hidden" name="size" :value="pagination.pageSize" />
           <div class="col-lg-3">
             <input
               type="text"
-              class="form-control"
+              class="form-control search-input"
               v-model="filters.search"
               placeholder="Tìm kiếm theo tên, loại hàng, hãng..."
             />
           </div>
           <div class="col-lg-2">
-            <select
-              class="form-select"
-              v-model="filters.categoryId"
-              @change="filterSubCategoriesForFilter"
-            >
-              <option value="">Tất cả loại hàng</option>
+            <select class="form-select" v-model="filters.categoryId">
+              <option value="">Thương hiệu</option>
               <option v-for="cat in categories" :value="cat.id" :key="cat.id">
                 {{ cat.name }}
               </option>
@@ -63,30 +59,31 @@
           <div class="col-lg-2">
             <select
               class="form-select"
-              v-model="filters.subCategoryId"
-              id="filterSubCategory"
+              v-model="filters.gender"
+              id="filterGender"
             >
-              <option value="">Tất cả hãng</option>
-              <option
-                v-for="subcat in filteredSubCategories"
-                :value="subcat.id"
-                :key="subcat.id"
-                :data-category="subcat.category?.id"
-              >
-                {{ subcat.subCategoriesName }}
-              </option>
+              <option value="">Giới tính</option>
+              <option value="Đồng hồ nam">Đồng hồ nam</option>
+              <option value="Đồng hồ nữ">Đồng hồ nữ</option>
             </select>
           </div>
           <div class="col-lg-2">
             <select class="form-select" v-model="filters.status">
-              <option value="">Tất cả trạng thái</option>
+              <option value="">Trạng thái</option>
               <option value="1">Hoạt động</option>
               <option value="0">Khóa</option>
             </select>
           </div>
-          <div class="col-lg-2">
-            <button type="submit" class="btn btn-primary w-100">
-              <i class="fas fa-filter me-2"></i>Lọc
+          <div class="col-lg-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+              <i class="fas fa-filter me-1"></i>Lọc
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary flex-grow-1"
+              @click="resetFiltersAndLoad"
+            >
+              <i class="fas fa-times me-1"></i>Xóa lọc
             </button>
           </div>
         </form>
@@ -125,16 +122,16 @@
             <td>{{ product.subCategory?.subCategoriesName || "N/A" }}</td>
             <td>
               <span v-if="product.discountPercentage">
-                {{ formatPrice(product.discountedPrice) }} VND
+                {{ formatPrice(product.discountedPrice) }}
                 <br />
-                <span style="text-decoration: line-through; color: #999"
-                  >{{ formatPrice(product.price) }} VND</span
-                >
+                <span style="text-decoration: line-through; color: #999">{{
+                  formatPrice(product.price)
+                }}</span>
                 <span style="color: #d4af37">
                   ({{ product.discountPercentage }}% OFF)</span
                 >
               </span>
-              <span v-else>{{ formatPrice(product.price) }} VND</span>
+              <span v-else>{{ formatPrice(product.price) }}</span>
             </td>
             <td>{{ product.qty }}</td>
             <td>{{ product.description || "N/A" }}</td>
@@ -273,7 +270,7 @@
                     type="number"
                     v-model.number="newProduct.price"
                     class="form-control"
-                    min="0"
+                    min="1000000"
                     step="1000"
                     required
                   />
@@ -400,7 +397,7 @@
                     type="number"
                     v-model.number="editingProduct.price"
                     class="form-control"
-                    min="0"
+                    min="1000000"
                     step="1000"
                     required
                   />
@@ -525,14 +522,13 @@ import { formatPrice as formatPriceUtil } from "@/utils/formatters"; // Assuming
 const products = ref([]);
 const categories = ref([]);
 const subcategories = ref([]);
-const filteredSubCategories = ref([]);
 const filteredSubCategoriesForAdd = ref([]);
 const filteredSubCategoriesForEdit = ref([]);
 
 const filters = reactive({
   search: "",
   categoryId: "",
-  subCategoryId: "",
+  gender: "",
   status: "",
 });
 
@@ -595,46 +591,87 @@ const visiblePages = computed(() => {
 });
 
 // --- Methods ---
-const loadProducts = async () => {
+const resetFilters = () => {
+  filters.search = "";
+  filters.categoryId = "";
+  filters.gender = "";
+  filters.status = "";
+};
+
+const resetFiltersAndLoad = () => {
+  resetFilters();
+  applyFilters();
+};
+
+const loadProducts = async (isRetry = false) => {
   try {
     const params = {
       page: pagination.currentPage,
       size: pagination.pageSize,
-      search: filters.search || null, // Send null if empty
+      search: filters.search || null,
       categoryId: filters.categoryId || null,
-      subCategoryId: filters.subCategoryId || null,
+      gender: filters.gender || null,
       status: filters.status || null,
     };
-
-    // Use apiClient
     const response = await apiClient.get("/crud/products", { params });
 
     if (response && response.data) {
-      // Extract products
       products.value = Array.isArray(response.data.products)
         ? response.data.products
         : [];
 
-      // Extract pagination
-      pagination.totalPages =
+      // Store the *new* total pages count
+      const newTotalPages =
         typeof response.data.totalPages === "number" &&
         response.data.totalPages >= 0
           ? response.data.totalPages
           : 0;
-      pagination.currentPage = response.data.currentPage ?? 0;
+      pagination.totalPages = newTotalPages;
 
-      // Extract categories and subcategories from the *same* response
+      // Use the current page from the response IF VALID, otherwise adjust
+      const responseCurrentPage = response.data.currentPage ?? 0;
+
+      // ---- Pagination Stability Check ----
+      if (newTotalPages > 0 && responseCurrentPage >= newTotalPages) {
+        // If the current page from response is invalid (e.g., after deletion/filtering)
+        // Go to the new last page
+        console.warn(
+          `Current page ${responseCurrentPage} is out of bounds (${newTotalPages}). Adjusting to last page.`
+        );
+        pagination.currentPage = Math.max(0, newTotalPages - 1);
+        // Avoid infinite loops if retrying already
+        if (!isRetry) {
+          loadProducts(true); // Reload data for the adjusted page
+          return; // Exit current execution to avoid further processing with old data
+        }
+      } else {
+        // If the current page is valid, update it from the response
+        pagination.currentPage = responseCurrentPage;
+      }
+      // ---- End Pagination Stability Check ----
+
+      // Update categories and subcategories (for modals)
       categories.value = Array.isArray(response.data.categories)
         ? response.data.categories
         : [];
       subcategories.value = Array.isArray(response.data.subcategories)
         ? response.data.subcategories
         : [];
-
-      // Initialize/Update subcategory filters *after* loading data
-      filterSubCategoriesForFilter();
-      filterSubCategories(); // For Add modal
-      filterSubCategoriesEdit(); // For Edit modal
+      // Initialize modal subcategory filters if needed
+      if (
+        filteredSubCategoriesForAdd.value.length === 0 &&
+        subcategories.value.length > 0 &&
+        !newProduct.categoryId
+      ) {
+        filterSubCategories();
+      }
+      if (
+        filteredSubCategoriesForEdit.value.length === 0 &&
+        subcategories.value.length > 0 &&
+        !editingProduct.categoryId
+      ) {
+        filterSubCategoriesEdit();
+      }
     } else {
       console.warn("Invalid response structure from /crud/products");
       products.value = [];
@@ -650,16 +687,22 @@ const loadProducts = async () => {
     categories.value = [];
     subcategories.value = [];
     pagination.totalPages = 0;
+    pagination.currentPage = 0; // Reset page on error too
   }
 };
 
 const applyFilters = () => {
-  pagination.currentPage = 0;
+  pagination.currentPage = 0; // Reset page to 0 when filtering
   loadProducts();
 };
 
 const changePage = (page) => {
-  if (page >= 0 && page < pagination.totalPages) {
+  if (
+    page >= 0 &&
+    page < pagination.totalPages &&
+    page !== pagination.currentPage
+  ) {
+    // Added check to prevent redundant loads
     pagination.currentPage = page;
     loadProducts();
   }
@@ -700,29 +743,34 @@ const handleAddImageChange = (event) => {
   }
 };
 
+const validatePrice = (price) => {
+  if (typeof price !== "number" || price < 1000000) {
+    errorMessage.value = "Giá sản phẩm phải từ 1.000.000 VND trở lên.";
+    setTimeout(() => (errorMessage.value = null), 4000);
+    return false;
+  }
+  return true;
+};
+
 const saveProduct = async () => {
+  if (!validatePrice(newProduct.price)) return; // Add price validation check
   try {
     const formData = new FormData();
     formData.append("name", newProduct.name);
-    // Send categoryId explicitly as backend expects it
     formData.append("categoryId", newProduct.categoryId);
     formData.append("subCategoryId", newProduct.subCategoryId);
     formData.append("price", newProduct.price.toString());
     formData.append("qty", newProduct.qty.toString());
     formData.append("description", newProduct.description || "");
     formData.append("status", newProduct.status);
-
     if (newProduct.imageFile) {
       formData.append("imageFile", newProduct.imageFile);
     }
-
-    // Use apiClient
     await apiClient.post("/crud/products/save", formData);
-
     successMessage.value = "Thêm sản phẩm thành công!";
     setTimeout(() => (successMessage.value = null), 5000);
     addModalInstance.value?.hide();
-    loadProducts(); // Refresh list
+    loadProducts();
   } catch (error) {
     console.error("Error saving product:", error);
     errorMessage.value = error.response?.data?.error || "Lỗi khi thêm sản phẩm";
@@ -768,29 +816,26 @@ const handleEditImageChange = (event) => {
 };
 
 const updateProduct = async () => {
+  if (!validatePrice(editingProduct.price)) return; // Add price validation check
   try {
     const formData = new FormData();
     formData.append("id", editingProduct.id.toString());
     formData.append("name", editingProduct.name);
-    formData.append("categoryId", editingProduct.categoryId); // Send categoryId
+    formData.append("categoryId", editingProduct.categoryId);
     formData.append("subCategoryId", editingProduct.subCategoryId);
     formData.append("price", editingProduct.price.toString());
     formData.append("qty", editingProduct.qty.toString());
     formData.append("description", editingProduct.description || "");
     formData.append("status", editingProduct.status);
-    formData.append("existingImage", editingProduct.image || ""); // Send existing image name
-
+    formData.append("existingImage", editingProduct.image || "");
     if (editingProduct.imageFile) {
       formData.append("imageFile", editingProduct.imageFile);
     }
-
-    // Use apiClient
     await apiClient.post("/crud/products/save", formData);
-
     successMessage.value = "Cập nhật sản phẩm thành công!";
     setTimeout(() => (successMessage.value = null), 5000);
     editModalInstance.value?.hide();
-    loadProducts(); // Refresh list
+    loadProducts();
   } catch (error) {
     console.error("Error updating product:", error);
     errorMessage.value =
@@ -813,15 +858,12 @@ const closeDeleteModal = () => {
 const confirmDelete = async () => {
   if (!deletingProduct.id) return;
   try {
-    // Use apiClient
     await apiClient.delete(`/crud/products/delete/${deletingProduct.id}`);
     successMessage.value = "Xóa sản phẩm thành công!";
     setTimeout(() => (successMessage.value = null), 5000);
     deleteModalInstance.value?.hide();
-    // Adjust page if last item deleted
-    if (products.value.length === 1 && pagination.currentPage > 0) {
-      pagination.currentPage--;
-    }
+    // No need to manually decrement page here,
+    // loadProducts will handle the adjustment if the page becomes invalid
     loadProducts(); // Refresh list
   } catch (error) {
     console.error("Error deleting product:", error);
@@ -839,7 +881,6 @@ const filterSubCategories = () => {
       (subcat) => subcat.category?.id == newProduct.categoryId
     );
   }
-  // Reset subcategory if selected category changes and current subcat is not valid
   if (
     !filteredSubCategoriesForAdd.value.some(
       (sc) => sc.id == newProduct.subCategoryId
@@ -857,7 +898,6 @@ const filterSubCategoriesEdit = () => {
       (subcat) => subcat.category?.id == editingProduct.categoryId
     );
   }
-  // Reset subcategory if selected category changes and current subcat is not valid
   if (
     !filteredSubCategoriesForEdit.value.some(
       (sc) => sc.id == editingProduct.subCategoryId
@@ -865,17 +905,6 @@ const filterSubCategoriesEdit = () => {
   ) {
     editingProduct.subCategoryId = "";
   }
-};
-
-const filterSubCategoriesForFilter = () => {
-  if (!filters.categoryId) {
-    filteredSubCategories.value = [...subcategories.value];
-  } else {
-    filteredSubCategories.value = subcategories.value.filter(
-      (subcat) => subcat.category?.id == filters.categoryId
-    );
-  }
-  filters.subCategoryId = ""; // Reset filter subcategory when category changes
 };
 
 // --- Formatting & Utilities ---
@@ -988,11 +1017,6 @@ table thead tr th {
 tbody tr {
   background: rgba(212, 175, 55, 0.05);
   transition: all 0.3s ease;
-}
-
-tbody tr:hover {
-  background: rgba(212, 175, 55, 0.1);
-  transform: scale(1.01);
 }
 
 tbody td {
@@ -1188,11 +1212,12 @@ table thead tr th:nth-child(10) {
 }
 
 .search-filter-container {
-  background: #222222;
+  background: #2a2a2a;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
   border: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 25px;
 }
 
 .search-filter-container .row {
@@ -1207,20 +1232,43 @@ table thead tr th:nth-child(10) {
   width: 200px;
 }
 
-.search-filter-container .btn-primary {
-  background: #d4af37;
-  color: #111111;
-  border: none;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 0;
+.search-filter-container .form-control,
+.search-filter-container .form-select {
+  background-color: #1e1e1e;
+  border-color: #444;
+  color: #eee;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
+.search-filter-container .form-control:focus,
+.search-filter-container .form-select:focus {
+  background-color: #1e1e1e;
+  border-color: #d4af37;
+  box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.2);
+  color: #fff;
+}
+
+.search-filter-container .btn-primary {
+  background: #d4af37;
+  color: #111;
+  border: none;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
 .search-filter-container .btn-primary:hover {
-  background: #b4941e;
+  background: #c09d2e;
+  transform: translateY(-1px);
+}
+.search-filter-container .btn-secondary {
+  background: #444;
+  color: #ccc;
+  border: 1px solid #555;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.search-filter-container .btn-secondary:hover {
+  background: #505050;
+  color: #fff;
+  border-color: #666;
+  transform: translateY(-1px);
 }
 
 .alert {
@@ -1300,5 +1348,41 @@ table thead tr th:nth-child(10) {
     flex-direction: column;
     gap: 0;
   }
+}
+
+/* Style for the search input placeholder */
+.search-input::placeholder {
+  color: #a0a0a0;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* You might need vendor prefixes for older browsers */
+.search-input::-webkit-input-placeholder {
+  color: #a0a0a0;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.search-input::-moz-placeholder {
+  color: #a0a0a0;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.search-input:-ms-input-placeholder {
+  color: #a0a0a0;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.search-input:-moz-placeholder {
+  color: #a0a0a0;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Optional: Adjust button widths if needed */
+.search-filter-container .col-lg-3.d-flex.gap-2 {
+  /* Override default width if needed */
+  /* width: auto; */
+  /* flex-basis: auto; */
 }
 </style>

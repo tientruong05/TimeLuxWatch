@@ -48,10 +48,11 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { formatPrice } from "@/utils/formatters";
 import { useRouter, useRoute } from "vue-router"; // Import useRoute
 import { useAuthStore } from "@/stores/auth"; // Import Pinia store
+import { useNotificationStore } from "@/stores/notificationStore"; // Import Notification store
 import apiClient from "@/services/api"; // Import apiClient
 
 const props = defineProps({
@@ -79,10 +80,10 @@ const setDefaultImage = (event) => {
   event.target.src = "http://localhost:8080/photos/placeholder.png"; // Set to placeholder if image fails
 };
 
-// Or use a store action
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const notificationStore = useNotificationStore(); // Use the notification store
 
 const addToCartHandler = async (productId) => {
   console.log(`Add to cart clicked for product ID: ${productId}`);
@@ -106,15 +107,23 @@ const addToCartHandler = async (productId) => {
 
     if (response.data && response.data.message === "success") {
       authStore.updateCartCount(response.data.cartCount); // Update cart count in store
-      alert("Đã thêm sản phẩm vào giỏ hàng!"); // Simple confirmation
+      // alert("Đã thêm sản phẩm vào giỏ hàng!"); // Simple confirmation
       // TODO: Add a more sophisticated notification (e.g., toast)
+      notificationStore.addNotification(
+        "Đã thêm sản phẩm vào giỏ hàng!",
+        "success"
+      ); // Use global notification store
     } else {
       throw new Error(response.data.error || "Không thể thêm vào giỏ hàng");
     }
   } catch (error) {
     console.error("Error adding to cart:", error);
-    alert(`Lỗi: ${error.message || "Không thể thêm vào giỏ hàng"}`);
+    // alert(`Lỗi: ${error.message || "Không thể thêm vào giỏ hàng"}`);
     // TODO: Add a more sophisticated notification (e.g., toast)
+    notificationStore.addNotification(
+      `Lỗi: ${error.message || "Không thể thêm vào giỏ hàng"}`,
+      "danger"
+    ); // Use global notification store
   }
 };
 
@@ -248,9 +257,9 @@ const addToCartHandler = async (productId) => {
 }
 
 .btn-shop:hover {
-  background-color: #333; /* Darker background on hover */
+  background-color: #c0392b; /* Darker accent color */
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 15px rgba(231, 76, 60, 0.3);
 }
 </style>

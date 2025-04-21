@@ -157,9 +157,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductDTO> getFilteredProducts(String search, Integer categoryId, Integer subCategoryId, Integer status, Pageable pageable) {
-        // Restore original filtering logic
-        Page<ProductEntity> productPage = productRepository.findByFilters(search, categoryId, subCategoryId, status, pageable);
+    public Page<ProductDTO> getFilteredProducts(String search, Integer categoryId, String gender, Integer status, Pageable pageable) {
+        // Call the updated repository method, passing gender directly
+        Page<ProductEntity> productPage = productRepository.findByFilters(search, categoryId, gender, status, pageable);
 
         return productPage.map(product -> {
             ProductDTO productDTO = new ProductDTO();
@@ -274,22 +274,37 @@ public class ProductServiceImpl implements ProductService {
                             if (originalFileName == null || !originalFileName.contains(".")) {
                                 throw new RuntimeException("Tên file không hợp lệ.");
                             }
-                            Path targetPath = Paths.get("C:/watch-store/photos", originalFileName);
+
+                            // --- Change Target Path Logic --- 
                             try {
-                                Files.createDirectories(targetPath.getParent());
+                                // Get the path to the resources/static/photos directory
+                                // This works well in standard Maven/Gradle project structures during development
+                                Path resourceDirectory = Paths.get("src","main","resources","static", "photos");
+                                String absolutePath = resourceDirectory.toFile().getAbsolutePath();
+                                Path targetPath = Paths.get(absolutePath, originalFileName);
+
+                                System.out.println("Target image save path: " + targetPath.toString()); // Log path for debugging
+
+                                Files.createDirectories(targetPath.getParent()); // Ensure directory exists
+                                
+                                // Handle potential file overwrites or renaming
                                 if (Files.exists(targetPath)) {
                                     try {
                                         Files.deleteIfExists(targetPath);
                                     } catch (IOException e) {
+                                         // If delete fails, try renaming (less ideal)
                                         String newFileName = System.currentTimeMillis() + "_" + originalFileName;
-                                        targetPath = Paths.get("C:/watch-store/photos", newFileName);
+                                        targetPath = Paths.get(absolutePath, newFileName);
+                                        System.out.println("File existed, trying new path: " + targetPath.toString());
                                     }
                                 }
                                 Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
                                 product.setImage(targetPath.getFileName().toString());
+
                             } catch (IOException e) {
                                 throw new RuntimeException("Không thể lưu ảnh: " + e.getMessage(), e);
                             }
+                            // --- End Change Target Path Logic ---
                         });
 
                 if (product.getImage() == null) {

@@ -59,7 +59,7 @@
                 <!-- Category -->
                 <div class="mb-3">
                   <label for="productCategory" class="form-label"
-                    >Loại hàng</label
+                    >Thương hiệu</label
                   >
                   <select
                     class="form-select"
@@ -69,7 +69,7 @@
                     required
                     :class="{ 'is-invalid': errors.categoryId }"
                   >
-                    <option value="" disabled>Chọn loại hàng</option>
+                    <option value="" disabled>Chọn thương hiệu</option>
                     <option
                       v-for="cat in categories"
                       :value="cat.id"
@@ -86,7 +86,7 @@
                 <!-- SubCategory -->
                 <div class="mb-3">
                   <label for="productSubCategory" class="form-label"
-                    >Hãng</label
+                    >Giới tính</label
                   >
                   <select
                     class="form-select"
@@ -96,7 +96,7 @@
                     :disabled="!formData.categoryId"
                     :class="{ 'is-invalid': errors.subCategoryId }"
                   >
-                    <option value="" disabled>Chọn hãng</option>
+                    <option value="" disabled>Chọn giới tính</option>
                     <option
                       v-for="subcat in localFilteredSubcategories"
                       :value="subcat.id"

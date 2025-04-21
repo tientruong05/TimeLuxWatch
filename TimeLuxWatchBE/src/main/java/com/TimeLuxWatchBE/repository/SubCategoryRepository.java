@@ -37,4 +37,13 @@ public interface SubCategoryRepository extends JpaRepository<SubCategoryEntity, 
      * @return Danh sách các danh mục phụ
      */
     List<SubCategoryEntity> findBySubCategoriesName(String subCategoriesName);
+
+    // Add this method to count remaining subcategories for a given category ID
+    long countByCategoryId(int categoryId);
+
+    // Check if a subcategory name already exists for a specific category ID (case-insensitive)
+    boolean existsByCategory_IdAndSubCategoriesNameIgnoreCase(int categoryId, String subCategoriesName);
+
+    // Check for update: exists for the category AND the ID is different from the one being updated
+    boolean existsByCategory_IdAndSubCategoriesNameIgnoreCaseAndIdNot(int categoryId, String subCategoriesName, int currentId);
 }

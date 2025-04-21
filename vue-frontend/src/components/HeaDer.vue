@@ -304,7 +304,11 @@ export default {
 
     // Thay thế biến user và cartCount với computed properties từ store
     const user = computed(() => authStore.user);
-    const cartCount = computed(() => authStore.cartCount);
+    const cartCount = computed(() => {
+      const count = authStore.cartCount;
+      console.log(`HeaDer.vue: Computed cartCount evaluated. Value: ${count}`);
+      return count;
+    });
 
     const inputStyle = computed(() => {
       return {
@@ -374,6 +378,8 @@ export default {
     const submitSearch = () => {
       if (searchQuery.value.trim()) {
         router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
+        showSuggestions.value = false;
+        isInputActive.value = false;
       }
     };
 

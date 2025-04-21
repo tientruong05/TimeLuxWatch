@@ -273,7 +273,7 @@ export default {
       );
       const completed = this.orders.length - delivering.length;
       const totalSpent = this.orders.reduce(
-        (sum, o) => sum + (o.totalAmount || 0),
+        (sum, o) => sum + (o.totalAmount || 0) + 30000,
         0
       );
       this.summary[0].value = `${this.orders.length} đơn`;

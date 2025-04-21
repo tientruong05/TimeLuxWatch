@@ -98,14 +98,12 @@
                       <span class="discount-price">
                         {{ formatCurrency(item.discountedPrice * item.qty) }}
                       </span>
-                      <span class="currency">VNĐ</span>
                       <span class="original-price">
                         {{ formatCurrency(item.price * item.qty) }}
                       </span>
-                      <span class="currency">VNĐ</span>
                     </span>
                     <span v-else>
-                      {{ formatCurrency(item.discountedPrice * item.qty) }} VNĐ
+                      {{ formatCurrency(item.price * item.qty) }}
                     </span>
                   </p>
                 </div>
@@ -163,6 +161,16 @@
         </div>
       </div>
     </div>
+
+    <ConfirmationModal
+      :show="showConfirmDeleteModal"
+      title="Xác nhận xóa sản phẩm"
+      message="Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?"
+      confirmText="Xóa"
+      cancelText="Hủy"
+      @confirm="handleConfirmDelete"
+      @cancel="handleCancelDelete"
+    />
   </div>
 </template>
 
@@ -170,9 +178,13 @@
 import { Toast } from "bootstrap";
 import apiClient from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
+import ConfirmationModal from "./ConfirmationModal.vue";
 
 export default {
   name: "ShoppingCart",
+  components: {
+    ConfirmationModal,
+  },
   data() {
     return {
       cartItems: [],
@@ -180,6 +192,8 @@ export default {
       totalAmount: 0,
       selectedItems: [],
       hasSelectedItems: false,
+      showConfirmDeleteModal: false,
+      itemToDeleteId: null,
     };
   },
   mounted() {
@@ -192,8 +206,6 @@ export default {
         const response = await apiClient.get("/cart/view");
         this.cartItems = response.data.cartItems || [];
         this.updateTotal();
-        const authStore = useAuthStore();
-        authStore.updateCartCount(response.data.cartCount || 0);
       } catch (error) {
         console.error("Error fetching cart data:", error);
         if (error.response && error.response.status === 401) {
@@ -278,16 +290,28 @@ export default {
       }
     },
     async removeCartItem(itemId) {
-      if (confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
-        try {
-          await apiClient.post(`/cart/remove/${itemId}`);
-          await this.fetchCartData();
-          this.showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
-        } catch (error) {
-          console.error("Error removing cart item:", error);
-          this.showToast("Có lỗi xảy ra khi xóa sản phẩm!");
-        }
+      this.itemToDeleteId = itemId;
+      this.showConfirmDeleteModal = true;
+    },
+    async handleConfirmDelete() {
+      if (!this.itemToDeleteId) return;
+
+      const itemId = this.itemToDeleteId;
+      this.showConfirmDeleteModal = false;
+      this.itemToDeleteId = null;
+
+      try {
+        await apiClient.post(`/cart/remove/${itemId}`);
+        await this.fetchCartData();
+        this.showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
+      } catch (error) {
+        console.error("Error removing cart item:", error);
+        this.showToast("Có lỗi xảy ra khi xóa sản phẩm!");
       }
+    },
+    handleCancelDelete() {
+      this.showConfirmDeleteModal = false;
+      this.itemToDeleteId = null;
     },
     updateTotal() {
       const checkboxes = document.querySelectorAll(".item-checkbox:checked");
@@ -302,7 +326,7 @@ export default {
         const item = this.cartItems.find((item) => item.id === itemId);
         if (item && item.availableQty > 0 && item.qty > 0) {
           total += item.discountedPrice * item.qty;
-        } else {
+        } else if (item) {
           checkbox.checked = false;
         }
       });

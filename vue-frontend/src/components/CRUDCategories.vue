@@ -311,12 +311,10 @@ const setupAlertAutoHide = () => {
 // --- Modal Handling ---
 const openAddModal = () => {
   isEditMode.value = false;
-  // Prepare data for add mode, maybe pre-select current brand
+  // Prepare data for add mode, ensuring brand name starts empty
   selectedCategoryType.value = {
-    categoryName:
-      selectedCategoryName.value ||
-      (categories.value.length > 0 ? categories.value[0].name : ""),
-    subCategoriesName: "",
+    categoryName: "", // Set to empty string for add mode
+    subCategoriesName: "", // Start empty for type as well
     status: 1,
   };
   showModal.value = true;
@@ -443,11 +441,6 @@ table thead tr th {
 tbody tr {
   background: rgba(212, 175, 55, 0.05);
   transition: all 0.3s ease;
-}
-
-tbody tr:hover {
-  background: rgba(212, 175, 55, 0.1);
-  transform: scale(1.01);
 }
 
 tbody td {

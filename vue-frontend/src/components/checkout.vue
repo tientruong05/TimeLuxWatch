@@ -122,6 +122,7 @@
 <script>
 import apiClient from "@/services/api";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 
 export default {
   name: "CheckOut",
@@ -248,44 +249,58 @@ export default {
       this.isSubmitting = true;
 
       try {
-        const orderData = new URLSearchParams();
-        orderData.append("fullName", this.formData.fullName);
-        orderData.append("address", this.formData.address);
-        orderData.append("phone", this.formData.phone);
+        const formData = new URLSearchParams();
+        formData.append("fullName", this.formData.fullName);
+        formData.append("address", this.formData.address);
+        formData.append("phone", this.formData.phone);
         if (this.formData.note) {
-          orderData.append("note", this.formData.note);
+          formData.append("note", this.formData.note);
         }
 
-        const response = await apiClient.post("/cart/complete", orderData, {
+        const response = await apiClient.post("/cart/complete", formData, {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
         });
 
         if (response.data && response.data.orderId) {
-          const orderId = response.data.orderId;
-          console.log("Order completed successfully! Order ID:", orderId);
+          const authStore = useAuthStore();
+          authStore.justCheckedOut = true;
+          console.log("Checkout.vue: Setting justCheckedOut flag to true.");
+          authStore.isAuthCheckPending = true;
+          console.log("Checkout.vue: Setting isAuthCheckPending flag to true.");
+
+          // Use the new refreshCartCount method to update cart count
+          try {
+            console.log("Checkout.vue: Refreshing cart count after checkout");
+            await authStore.refreshCartCount();
+          } catch (countError) {
+            console.error("Error refreshing cart count:", countError);
+            // If refreshing fails, set to 0 as fallback
+            authStore.updateCartCount(0);
+          }
+
+          setTimeout(() => {
+            authStore.isAuthCheckPending = false;
+            this.router.push({
+              name: "OrderConfirmation",
+              params: { id: response.data.orderId },
+            });
+          }, 500);
+        } else {
+          this.error = response.data.error || "Đặt hàng không thành công.";
+        }
+      } catch (error) {
+        console.error("Error completing order:", error);
+        if (error.response && error.response.status === 401) {
+          this.error = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
           this.router.push({
-            name: "OrderConfirmation",
-            params: { id: orderId },
+            name: "LoginRegister",
+            query: { redirect: "/checkout" },
           });
         } else {
           this.error =
-            "Đặt hàng thành công nhưng không nhận được mã đơn hàng. Vui lòng liên hệ hỗ trợ.";
-          console.error(
-            "Order completed but no orderId received:",
-            response.data
-          );
-        }
-      } catch (error) {
-        console.error("Error creating order:", error);
-        if (error.response) {
-          this.error =
-            error.response.data.error ||
-            "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";
-        } else {
-          this.error =
-            "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.";
+            error.response?.data?.error || "Có lỗi xảy ra khi đặt hàng.";
         }
       } finally {
         this.isSubmitting = false;

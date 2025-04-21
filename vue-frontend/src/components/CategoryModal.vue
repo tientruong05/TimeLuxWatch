@@ -28,40 +28,39 @@
           </div>
 
           <form @submit.prevent="saveCategoryType">
-            <!-- Brand Selection -->
+            <!-- Brand Input -->
             <div class="mb-3">
               <label class="form-label">Thương Hiệu:</label>
-              <select
-                v-model="formData.categoryName"
-                class="form-select"
+              <input
+                type="text"
+                v-model.trim="formData.categoryName"
+                class="form-control"
+                placeholder="Nhập tên thương hiệu"
                 required
                 :class="{ 'is-invalid': errors.categoryName }"
-              >
-                <option value="" disabled>Chọn thương hiệu</option>
-                <option
-                  v-for="cat in categories"
-                  :key="cat.id"
-                  :value="cat.name"
-                >
-                  {{ cat.name }}
-                </option>
-              </select>
+              />
               <div class="invalid-feedback" v-if="errors.categoryName">
                 {{ errors.categoryName }}
               </div>
             </div>
-            <!-- Type Input -->
+            <!-- Type Selection -->
             <div class="mb-3">
-              <label class="form-label"
-                >Loại sản phẩm (ví dụ: Đồng hồ nam):</label
-              >
-              <input
-                type="text"
-                v-model.trim="formData.subCategoriesName"
-                class="form-control"
+              <label class="form-label">Loại sản phẩm:</label>
+              <select
+                v-model="formData.subCategoriesName"
+                class="form-select"
                 required
                 :class="{ 'is-invalid': errors.subCategoriesName }"
-              />
+              >
+                <option
+                  v-for="option in subCategoryOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="option.disabled"
+                >
+                  {{ option.text }}
+                </option>
+              </select>
               <div class="invalid-feedback" v-if="errors.subCategoriesName">
                 {{ errors.subCategoriesName }}
               </div>
@@ -102,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, defineProps, defineEmits } from "vue";
+import { ref, reactive, watch, defineProps, defineEmits, computed } from "vue";
 import apiClient from "@/services/api";
 
 // --- Props ---
@@ -117,9 +116,9 @@ const props = defineProps({
     default: false,
   },
   categories: {
-    // Pass the list of available brands (categories)
+    // Pass the list of available brands (categories) - No longer directly used for brand input in modal
     type: Array,
-    required: true,
+    required: true, // Keep required if parent still needs to pass it for other reasons, or make false
     default: () => [],
   },
 });
@@ -144,6 +143,23 @@ const errors = reactive({
 const isSubmitting = ref(false);
 const submitError = ref(null);
 
+// --- Computed property to disable "Cả hai giới tính" in edit mode ---
+const subCategoryOptions = computed(() => {
+  const options = [
+    { value: "", text: "Chọn loại sản phẩm", disabled: true },
+    { value: "Đồng hồ nam", text: "Đồng hồ nam", disabled: false },
+    { value: "Đồng hồ nữ", text: "Đồng hồ nữ", disabled: false },
+  ];
+  if (!props.isEditMode) {
+    options.push({
+      value: "Cả hai giới tính",
+      text: "Cả hai giới tính",
+      disabled: false,
+    });
+  }
+  return options;
+});
+
 // --- Watcher to update form data when props change (for edit mode) ---
 watch(
   () => props.categoryType,
@@ -154,20 +170,15 @@ watch(
       formData.subCategoriesName = newVal.subCategoriesName || "";
       formData.status = newVal.status ?? 1;
     } else {
-      // Reset for add mode (or if prop becomes null)
       formData.id = null;
-      // Keep default or allow parent to set default categoryName for add mode
-      formData.categoryName =
-        props.categoryType?.categoryName ||
-        (props.categories.length > 0 ? props.categories[0].name : "");
-      formData.subCategoriesName = "";
+      formData.categoryName = props.categoryType?.categoryName || ""; // Keep potential prefill from parent
+      formData.subCategoriesName = ""; // Start empty for add mode
       formData.status = 1;
     }
-    // Clear errors when data changes
     Object.keys(errors).forEach((key) => (errors[key] = ""));
     submitError.value = null;
   },
-  { immediate: true, deep: true } // Run immediately and watch nested changes
+  { immediate: true, deep: true }
 );
 
 // --- Methods ---
@@ -177,11 +188,17 @@ const validateForm = () => {
   let isValid = true;
 
   if (!formData.categoryName?.trim()) {
-    errors.categoryName = "Vui lòng chọn hoặc nhập tên thương hiệu.";
+    errors.categoryName = "Vui lòng nhập tên thương hiệu.";
     isValid = false;
   }
   if (!formData.subCategoriesName?.trim()) {
-    errors.subCategoriesName = "Vui lòng nhập tên loại sản phẩm.";
+    errors.subCategoriesName = "Vui lòng chọn loại sản phẩm.";
+    isValid = false;
+  }
+  // Add validation if user selected the disabled option in edit mode somehow
+  if (props.isEditMode && formData.subCategoriesName === "Cả hai giới tính") {
+    errors.subCategoriesName =
+      "Không thể chọn 'Cả hai giới tính' khi chỉnh sửa.";
     isValid = false;
   }
   if (
@@ -203,30 +220,43 @@ const saveCategoryType = async () => {
   isSubmitting.value = true;
   submitError.value = null;
 
+  // --- Simplified Save Logic (Always one call) ---
   try {
-    const params = new URLSearchParams();
+    const payload = {
+      categoryName: formData.categoryName,
+      // Send the actual selected value (e.g., "Cả hai giới tính")
+      subCategoriesName: formData.subCategoriesName,
+      status: formData.status,
+    };
+
+    let url = "/crud/categories/save";
     if (props.isEditMode && formData.id) {
-      params.append("id", formData.id.toString());
+      url += `?id=${formData.id}`;
     }
-    params.append("categoryName", formData.categoryName);
-    params.append("subCategoriesName", formData.subCategoriesName);
-    params.append("status", formData.status.toString());
 
-    const response = await apiClient.post("/crud/categories/save", params);
-
-    // Emit save event on success
+    // Backend now handles the "Cả hai giới tính" logic
+    const response = await apiClient.post(url, payload);
     emit(
       "save",
-      response.data.message ||
+      response.data.message || // Use message directly from backend
         (props.isEditMode ? "Cập nhật thành công!" : "Thêm thành công!")
     );
   } catch (error) {
     console.error("Error saving category type:", error);
-    submitError.value =
-      error.response?.data?.error || "Lỗi khi lưu loại sản phẩm.";
+    if (error.response?.status === 409) {
+      // Duplicate error
+      submitError.value =
+        error.response.data.error ||
+        "Loại sản phẩm này đã tồn tại cho thương hiệu này.";
+    } else {
+      // Other errors (including backend validation for empty fields)
+      submitError.value =
+        error.response?.data?.error || "Lỗi khi lưu loại sản phẩm.";
+    }
   } finally {
     isSubmitting.value = false;
   }
+  // --- End Simplified Save Logic ---
 };
 
 const closeModal = () => {
@@ -316,5 +346,15 @@ const closeModal = () => {
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   margin-bottom: 1rem;
+}
+
+.form-select option:disabled {
+  color: #6c757d; /* Style disabled option */
+  background-color: #343a40; /* Darker background for disabled */
+}
+
+/* Ensure dropdown shows correctly */
+.modal-body .form-select {
+  /* Add styles if needed, but Bootstrap defaults usually work */
 }
 </style>

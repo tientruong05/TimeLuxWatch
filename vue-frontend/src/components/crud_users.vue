@@ -87,12 +87,6 @@
                 >
                   <i class="bi bi-pencil-fill"></i>
                 </button>
-                <button
-                  class="btn btn-danger btn-sm"
-                  @click="deleteUserHandler(user.id)"
-                >
-                  <i class="bi bi-trash-fill"></i>
-                </button>
               </td>
             </tr>
           </tbody>
@@ -185,7 +179,6 @@ const selectedUser = ref(null);
 const loadUsers = async () => {
   loading.value = true;
   errorMessage.value = null;
-  successMessage.value = null;
   try {
     const response = await apiClient.get("/users", {
       params: {
@@ -218,29 +211,6 @@ const changePage = (page) => {
   if (page >= 0 && page < totalPages.value) {
     currentPage.value = page;
     loadUsers();
-  }
-};
-
-// Delete user handler
-const deleteUserHandler = async (id) => {
-  if (!confirm("Bạn có chắc muốn xóa người dùng này?")) {
-    return;
-  }
-  successMessage.value = null;
-  errorMessage.value = null;
-  try {
-    const response = await apiClient.delete(`/users/delete/${id}`);
-    successMessage.value = response.data.message || "Xóa người dùng thành công";
-    // Reload users on the current page
-    // If the last item on a page is deleted, go to the previous page
-    if (users.value.length === 1 && currentPage.value > 0) {
-      currentPage.value--;
-    }
-    loadUsers();
-  } catch (error) {
-    console.error(`Error deleting user ${id}:`, error);
-    errorMessage.value =
-      error.response?.data?.error || "Lỗi khi xóa người dùng";
   }
 };
 
@@ -376,11 +346,6 @@ table thead tr th {
 tbody tr {
   background: rgba(212, 175, 55, 0.05);
   transition: all 0.3s ease;
-}
-
-tbody tr:hover {
-  background: rgba(212, 175, 55, 0.1);
-  transform: scale(1.01);
 }
 
 tbody td {
@@ -555,11 +520,6 @@ table thead tr th {
 tbody tr {
   background: rgba(212, 175, 55, 0.05);
   transition: all 0.3s ease;
-}
-
-tbody tr:hover {
-  background: rgba(212, 175, 55, 0.1);
-  transform: scale(1.01);
 }
 
 tbody td {

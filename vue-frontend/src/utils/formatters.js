@@ -9,10 +9,10 @@ export function formatPrice(number) {
     console.warn("formatPrice received invalid input:", number);
     return "..."; // Return a placeholder or handle as appropriate
   }
-  return number.toLocaleString("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  });
+  // Format the number with Vietnamese locale for separators
+  const formattedNumber = number.toLocaleString("vi-VN");
+  // Append " VND"
+  return `${formattedNumber} VND`;
 }
 
 // You can add other formatter functions here if needed

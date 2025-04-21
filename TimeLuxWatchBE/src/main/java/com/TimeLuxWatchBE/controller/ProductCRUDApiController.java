@@ -36,6 +36,7 @@ public class ProductCRUDApiController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(required = false) Integer subCategoryId,
+            @RequestParam(required = false) String gender,
             @RequestParam(required = false) String status) {
         Map<String, Object> response = new HashMap<>();
         Pageable pageable = PageRequest.of(page, size);
@@ -49,7 +50,7 @@ public class ProductCRUDApiController {
             }
         }
 
-        Page<ProductDTO> productPage = productService.getFilteredProducts(search, categoryId, subCategoryId, statusInt, pageable);
+        Page<ProductDTO> productPage = productService.getFilteredProducts(search, categoryId, gender, statusInt, pageable);
 
         response.put("products", productPage.getContent());
         response.put("currentPage", page);
@@ -59,6 +60,7 @@ public class ProductCRUDApiController {
         response.put("search", search);
         response.put("categoryId", categoryId);
         response.put("subCategoryId", subCategoryId);
+        response.put("gender", gender);
         response.put("status", status);
         response.put("categories", categoryService.getAllCategories());
         response.put("subcategories", subCategoryService.getAllSubCategories());

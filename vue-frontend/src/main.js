@@ -28,6 +28,9 @@ import AdminUsers from "@/components/crud_users.vue";
 import AdminProducts from "@/components/CRUDProducts.vue";
 import AdminCategories from "@/components/CRUDCategories.vue";
 import AdminDiscounts from "@/components/CRUDDiscount.vue";
+import AboutPage from "@/components/aboutPage.vue";
+import WarrantyPage from "@/components/warrantyPage.vue";
+import TermsPaymentPage from "@/components/TermsPayment.vue";
 
 // Define routes
 const routes = [
@@ -157,6 +160,22 @@ const routes = [
     component: () => import("@/components/VipPage.vue"),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: "/about",
+    name: "About",
+    component: AboutPage,
+  },
+  {
+    path: "/warranty",
+    name: "Warranty",
+    component: WarrantyPage,
+  },
+  {
+    path: "/payment-terms",
+    name: "PaymentTerms",
+    component: TermsPaymentPage,
+  },
+  // --- End of new static page routes ---
 ];
 
 // Create router instance

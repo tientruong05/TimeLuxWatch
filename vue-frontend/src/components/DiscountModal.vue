@@ -45,19 +45,6 @@
                     required
                   />
                 </div>
-                <div class="mb-3">
-                  <label class="form-label">Mã Giảm Giá (Code):</label>
-                  <input
-                    type="text"
-                    v-model="formData.discountCode"
-                    class="form-control"
-                    :disabled="isEditMode"
-                    required
-                  />
-                  <small v-if="!isEditMode" class="form-text text-muted"
-                    >Mã này không thể thay đổi sau khi tạo.</small
-                  >
-                </div>
               </div>
               <div class="col-md-6">
                 <div class="mb-3">
@@ -89,60 +76,119 @@
             </div>
 
             <hr />
-            <h6 class="text-warning">Áp dụng giảm giá cho:</h6>
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Loại hàng (Category):</label>
-                <select
-                  multiple
-                  class="form-select multi-select"
-                  v-model="selectedCategoryIds"
+
+            <!-- Selection Summary -->
+            <div
+              v-if="
+                selectedCategories.length ||
+                selectedSubCategories.length ||
+                selectedProducts.length
+              "
+              class="selection-summary mb-3 p-3 border rounded bg-dark"
+            >
+              <h6 class="text-warning mb-2">Các mục đã chọn áp dụng:</h6>
+              <div v-if="selectedCategories.length">
+                <strong>Loại hàng:</strong>
+                <span
+                  v-for="cat in selectedCategories"
+                  :key="cat.id"
+                  class="badge bg-secondary me-1 mb-1"
+                  >{{ cat.name }}</span
                 >
-                  <option
-                    v-for="cat in allCategories"
-                    :key="cat.id"
-                    :value="cat.id"
-                  >
-                    {{ cat.name }}
-                  </option>
-                </select>
               </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Hãng (SubCategory):</label>
-                <select
-                  multiple
-                  class="form-select multi-select"
-                  v-model="selectedSubCategoryIds"
+              <div v-if="selectedSubCategories.length" class="mt-2">
+                <strong>Hãng:</strong>
+                <span
+                  v-for="sub in selectedSubCategories"
+                  :key="sub.id"
+                  class="badge bg-info text-dark me-1 mb-1"
+                  >{{ subCategoryLabel(sub) }}</span
                 >
-                  <option
-                    v-for="subcat in allSubCategories"
-                    :key="subcat.id"
-                    :value="subcat.id"
-                  >
-                    {{ subcat.subCategoriesName }} ({{ subcat.category?.name }})
-                  </option>
-                </select>
               </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Sản phẩm (Product):</label>
-                <select
-                  multiple
-                  class="form-select multi-select"
-                  v-model="selectedProductIds"
+              <div v-if="selectedProducts.length" class="mt-2">
+                <strong>Sản phẩm:</strong>
+                <span
+                  v-for="prod in selectedProducts"
+                  :key="prod.id"
+                  class="badge bg-light text-dark me-1 mb-1"
+                  >{{ prod.name }}</span
                 >
-                  <option
-                    v-for="prod in allProducts"
-                    :key="prod.id"
-                    :value="prod.id"
-                  >
-                    {{ prod.name }}
-                  </option>
-                </select>
               </div>
             </div>
-            <small class="form-text text-muted"
-              >Giữ Ctrl (hoặc Cmd trên Mac) để chọn nhiều mục.</small
-            >
+            <!-- End Selection Summary -->
+
+            <h6 class="text-warning">Chọn để áp dụng giảm giá:</h6>
+            <div class="mb-3">
+              <label class="form-label">Loại hàng (Category):</label>
+              <VueMultiselect
+                v-model="selectedCategories"
+                :options="allCategories"
+                :multiple="true"
+                :close-on-select="false"
+                :clear-on-select="false"
+                :preserve-search="true"
+                placeholder="Tìm hoặc chọn loại hàng"
+                label="name"
+                track-by="id"
+                :preselect-first="false"
+              >
+                <template #noResult>Không tìm thấy kết quả.</template>
+              </VueMultiselect>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Hãng (SubCategory):</label>
+              <VueMultiselect
+                v-model="selectedSubCategories"
+                :options="filteredSubCategories"
+                :multiple="true"
+                :close-on-select="false"
+                :clear-on-select="false"
+                :preserve-search="true"
+                placeholder="Tìm hoặc chọn hãng"
+                track-by="id"
+                :custom-label="subCategoryLabel"
+                :preselect-first="false"
+              >
+                <template #option="{ option }">
+                  {{ option.subCategoriesName }} ({{ option.category?.name }})
+                </template>
+                <template #tag="{ option, remove }">
+                  <span class="multiselect__tag">
+                    <span
+                      >{{ option.subCategoriesName }} ({{
+                        option.category?.name
+                      }})</span
+                    >
+                    <i
+                      aria-hidden="true"
+                      tabindex="1"
+                      class="multiselect__tag-icon"
+                      @click="remove(option)"
+                    ></i>
+                  </span>
+                </template>
+                <template #noResult>Không tìm thấy kết quả.</template>
+              </VueMultiselect>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Sản phẩm (Product):</label>
+              <VueMultiselect
+                v-model="selectedProducts"
+                :options="filteredProducts"
+                :multiple="true"
+                :close-on-select="false"
+                :clear-on-select="false"
+                :preserve-search="true"
+                placeholder="Tìm hoặc chọn sản phẩm"
+                label="name"
+                track-by="id"
+                :preselect-first="false"
+              >
+                <template #noResult>Không tìm thấy kết quả.</template>
+              </VueMultiselect>
+            </div>
           </form>
         </div>
         <div class="modal-footer">
@@ -169,6 +215,7 @@
 <script setup>
 import { ref, reactive, watch, computed } from "vue";
 import apiClient from "@/services/api";
+import VueMultiselect from "vue-multiselect";
 
 // --- Props ---
 const props = defineProps({
@@ -190,7 +237,6 @@ const formData = reactive({
   id: null,
   discountName: "",
   discountValue: 0,
-  discountCode: "", // Added discount code
   startDate: "",
   endDate: "",
   status: 1,
@@ -200,9 +246,9 @@ const allCategories = ref([]);
 const allSubCategories = ref([]);
 const allProducts = ref([]); // Use ProductDTO structure {id, name, image, price, discountedPrice, discountPercentage, discounted}
 
-const selectedCategoryIds = ref([]);
-const selectedSubCategoryIds = ref([]);
-const selectedProductIds = ref([]);
+const selectedCategories = ref([]);
+const selectedSubCategories = ref([]);
+const selectedProducts = ref([]);
 
 const isLoading = ref(false);
 const isSubmitting = ref(false);
@@ -213,6 +259,45 @@ const isEditMode = computed(
   () => props.discountId !== null && props.discountId > 0
 );
 
+// --- Computed Properties for Filtering ---
+const filteredSubCategories = computed(() => {
+  if (selectedCategories.value.length === 0) {
+    return allSubCategories.value; // Show all if no category selected
+  }
+  const selectedCategoryIds = selectedCategories.value.map((cat) => cat.id);
+  return allSubCategories.value.filter(
+    (sub) => sub.category && selectedCategoryIds.includes(sub.category.id)
+  );
+});
+
+const filteredProducts = computed(() => {
+  const selectedCategoryIds = selectedCategories.value.map((cat) => cat.id);
+  const selectedSubCategoryIds = selectedSubCategories.value.map(
+    (sub) => sub.id
+  );
+
+  if (selectedCategoryIds.length === 0 && selectedSubCategoryIds.length === 0) {
+    return allProducts.value; // Show all if nothing selected
+  }
+
+  return allProducts.value.filter((prod) => {
+    // Check if product's subcategory's category is selected
+    const categoryMatch =
+      selectedCategoryIds.length > 0 &&
+      prod.subCategory?.category &&
+      selectedCategoryIds.includes(prod.subCategory.category.id);
+
+    // Check if product's subcategory is selected
+    const subCategoryMatch =
+      selectedSubCategoryIds.length > 0 &&
+      prod.subCategory &&
+      selectedSubCategoryIds.includes(prod.subCategory.id);
+
+    // Include product if it matches either selected category or selected subcategory
+    return categoryMatch || subCategoryMatch;
+  });
+});
+
 // --- Fetch Data ---
 const fetchModalData = async () => {
   if (!props.show) return;
@@ -220,90 +305,45 @@ const fetchModalData = async () => {
   isLoading.value = true;
   error.value = null;
   submitError.value = null;
-  resetForm(); // Reset form before fetching
+  resetForm(); // Reset form and selections first
 
   try {
-    // Fetch data required for dropdowns AND potentially existing data if editing
-    // Use the /api/discounts/{id} endpoint. Use a placeholder ID like 0 or 1 for add mode if backend supports it,
-    // otherwise, we need a dedicated endpoint or separate calls.
-    // Let's try using discountId = 0 for add mode, assuming backend might handle this.
-    // If not, we might need GET /api/categories, GET /api/subcategories, GET /api/products separately.
-    // The GET /api/discounts/{id} endpoint returns everything we need.
-    const fetchId = isEditMode.value ? props.discountId : 0; // Use 0 for Add mode data fetch
+    const fetchId = isEditMode.value ? props.discountId : 0;
+    // Assuming GET /api/discounts/0 returns all lists needed for add mode
+    // and GET /api/discounts/{id} returns the discount + details + all lists for edit mode
+    const response = await apiClient.get(`/discounts/edit-data/${fetchId}`); // Using a potentially combined endpoint
 
-    // Make the API call
-    // Note: If ID 0 doesn't work for fetching initial data, adjust this logic.
-    // Maybe fetch ID 1 if it likely exists, or call separate endpoints.
-    const response = await apiClient.get(`/api/discounts/${fetchId}`);
-
-    allCategories.value = response.data.categories || [];
-    allSubCategories.value = response.data.subCategories || [];
-    // Assuming products are returned as ProductDTOs
-    allProducts.value = response.data.products || [];
+    allCategories.value = response.data.allCategories || [];
+    allSubCategories.value = response.data.allSubCategories || [];
+    allProducts.value = response.data.allProducts || [];
 
     if (isEditMode.value && response.data.discount) {
       const discount = response.data.discount;
       formData.id = discount.id;
       formData.discountName = discount.discountName;
       formData.discountValue = discount.discountValue;
-      formData.discountCode = discount.discountCode; // Populate code
       formData.startDate = formatDateForInput(discount.startDate);
       formData.endDate = formatDateForInput(discount.endDate);
       formData.status = discount.status;
 
-      // Populate selected IDs from discountDetails
-      const details = response.data.discountDetails || [];
-      selectedCategoryIds.value = details
-        .filter((d) => d.category)
-        .map((d) => d.category.id);
-      selectedSubCategoryIds.value = details
-        .filter((d) => d.subCategory)
-        .map((d) => d.subCategory.id);
-      selectedProductIds.value = details
-        .filter((d) => d.product)
-        .map((d) => d.product.id);
+      // Map existing selections
+      selectedCategories.value = response.data.selectedCategories || [];
+      selectedSubCategories.value = response.data.selectedSubCategories || [];
+      selectedProducts.value = response.data.selectedProducts || [];
     } else if (!isEditMode.value) {
-      // Reset selections for add mode, form is already reset by resetForm()
+      // Reset selections for add mode (already done in resetForm)
     }
   } catch (err) {
     console.error("Error fetching modal data:", err);
-    if (err.response?.status === 404 && fetchId === 0) {
-      // Handle case where ID 0 doesn't work - try fetching categories/subs/products separately
-      error.value =
-        "Lỗi khi tải dữ liệu ban đầu. Không thể lấy danh sách Hãng/Loại/Sản phẩm.";
-      // Implement fallback fetching here if needed
-      // e.g., await fetchDropdownDataSeparately();
-      await fetchDropdownDataSeparately(); // Try fallback
-    } else if (isEditMode.value && err.response?.status === 404) {
-      error.value = `Không tìm thấy giảm giá với ID: ${props.discountId}.`;
-    } else {
-      error.value =
-        "Lỗi khi tải dữ liệu: " + (err.response?.data?.error || err.message);
-    }
+    error.value =
+      "Lỗi khi tải dữ liệu cho modal: " +
+      (err.response?.data?.error || err.message);
+    // Clear lists on error to prevent issues
+    allCategories.value = [];
+    allSubCategories.value = [];
+    allProducts.value = [];
   } finally {
     isLoading.value = false;
-  }
-};
-
-// Fallback function if GET /api/discounts/0 doesn't work
-const fetchDropdownDataSeparately = async () => {
-  try {
-    // Example: Fetch categories, subcategories, products using other endpoints if available
-    // This assumes endpoints like /api/categories, /api/subcategories exist
-    // and /api/crud/products returns products
-    const [catRes, subCatRes, prodRes] = await Promise.all([
-      apiClient.get("/api/categories"), // Adjust endpoint if needed
-      apiClient.get("/api/subcategories"), // Adjust endpoint if needed
-      apiClient.get("/api/crud/products?size=1000"), // Fetch products (adjust size)
-    ]);
-    allCategories.value = catRes.data || [];
-    allSubCategories.value = subCatRes.data || [];
-    allProducts.value = prodRes.data?.products || [];
-    error.value = null; // Clear previous error if fallback succeeds
-  } catch (fallbackError) {
-    console.error("Error fetching dropdown data separately:", fallbackError);
-    // Keep the original error message or set a new one
-    error.value = "Lỗi nghiêm trọng khi tải dữ liệu Hãng/Loại/Sản phẩm.";
   }
 };
 
@@ -319,18 +359,64 @@ watch(
   }
 );
 
+// Watch for changes in selectedCategories to potentially clear selectedSubCategories/Products
+// This prevents keeping selections that are no longer relevant after changing the category
+watch(
+  selectedCategories,
+  (newVal, oldVal) => {
+    if (newVal.length < oldVal.length) {
+      // If a category was removed
+      const newCategoryIds = newVal.map((c) => c.id);
+      // Remove subcategories whose category is no longer selected
+      selectedSubCategories.value = selectedSubCategories.value.filter(
+        (sub) => sub.category && newCategoryIds.includes(sub.category.id)
+      );
+      // Products are handled by the computed property filter, but we might also
+      // want to explicitly clear product selections if their parent category/subcategory is removed.
+      // Let's filter selected products as well:
+      selectedProducts.value = selectedProducts.value.filter((prod) => {
+        const categoryMatch =
+          prod.subCategory?.category &&
+          newCategoryIds.includes(prod.subCategory.category.id);
+        const subCategoryMatch =
+          prod.subCategory &&
+          selectedSubCategories.value.some((s) => s.id === prod.subCategory.id);
+        return categoryMatch || subCategoryMatch;
+      });
+    }
+  },
+  { deep: true }
+);
+
+// Watch selectedSubCategories for similar cleanup
+watch(
+  selectedSubCategories,
+  (newVal, oldVal) => {
+    if (newVal.length < oldVal.length) {
+      // If a subcategory was removed
+      const newSubCategoryIds = newVal.map((s) => s.id);
+      // Filter selected products
+      selectedProducts.value = selectedProducts.value.filter(
+        (prod) =>
+          prod.subCategory && newSubCategoryIds.includes(prod.subCategory.id)
+      );
+    }
+  },
+  { deep: true }
+);
+
 // --- Methods ---
 const resetForm = () => {
   formData.id = null;
   formData.discountName = "";
   formData.discountValue = 0;
-  formData.discountCode = ""; // Reset code
   formData.startDate = "";
   formData.endDate = "";
   formData.status = 1;
-  selectedCategoryIds.value = [];
-  selectedSubCategoryIds.value = [];
-  selectedProductIds.value = [];
+  // Also reset selections
+  selectedCategories.value = [];
+  selectedSubCategories.value = [];
+  selectedProducts.value = [];
   error.value = null;
   submitError.value = null;
   isSubmitting.value = false;
@@ -340,10 +426,6 @@ const validateForm = () => {
   submitError.value = null;
   if (!formData.discountName?.trim()) {
     submitError.value = "Vui lòng nhập tên giảm giá.";
-    return false;
-  }
-  if (!formData.discountCode?.trim()) {
-    submitError.value = "Vui lòng nhập mã giảm giá.";
     return false;
   }
   if (!formData.startDate) {
@@ -370,12 +452,10 @@ const saveDiscount = async () => {
   isSubmitting.value = true;
   submitError.value = null;
 
-  // Prepare the discount object for the request body
   const discountData = {
-    id: isEditMode.value ? formData.id : 0, // Send 0 or null for new
+    id: isEditMode.value ? formData.id : 0,
     discountName: formData.discountName,
     discountValue: formData.discountValue,
-    discountCode: formData.discountCode, // Include code
     startDate: formData.startDate,
     endDate: formData.endDate,
     status: formData.status,
@@ -383,15 +463,19 @@ const saveDiscount = async () => {
 
   // Prepare query parameters
   const params = new URLSearchParams();
-  selectedCategoryIds.value.forEach((id) => params.append("categoryIds", id));
-  selectedSubCategoryIds.value.forEach((id) =>
-    params.append("subCategoryIds", id)
+  selectedCategories.value.forEach((cat) =>
+    params.append("categoryIds", cat.id)
   );
-  selectedProductIds.value.forEach((id) => params.append("productIds", id));
+  selectedSubCategories.value.forEach((sub) =>
+    params.append("subCategoryIds", sub.id)
+  );
+  selectedProducts.value.forEach((prod) =>
+    params.append("productIds", prod.id)
+  );
 
   const url = isEditMode.value
-    ? `/api/discounts/edit/${formData.id}?${params.toString()}`
-    : `/api/discounts/create?${params.toString()}`;
+    ? `/discounts/edit/${formData.id}?${params.toString()}`
+    : `/discounts/create?${params.toString()}`;
   const method = isEditMode.value ? "put" : "post";
 
   try {
@@ -424,6 +508,13 @@ const formatDateForInput = (dateString) => {
     console.error("Error formatting date:", dateString, e);
     return ""; // Return empty if formatting fails
   }
+};
+
+const subCategoryLabel = (option) => {
+  if (option.category) {
+    return `${option.subCategoriesName} (Category: ${option.category.name})`;
+  }
+  return option.subCategoriesName;
 };
 </script>
 
@@ -504,4 +595,15 @@ const formatDateForInput = (dateString) => {
 .multi-select option {
   padding: 5px;
 }
+
+.selection-summary {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  font-size: 0.9em;
+}
+.selection-summary strong {
+  color: #d4af37;
+}
 </style>
+
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>

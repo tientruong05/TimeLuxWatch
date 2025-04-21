@@ -515,9 +515,17 @@ body {
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #3498db;
-  box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-  background-color: white;
+  /* Keep original light background, change border/shadow color */
+  background-color: #f9f9f9; /* Giữ nền sáng mặc định */
+  border-color: #d4af37; /* Viền vàng */
+  box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25); /* Bóng vàng nhạt */
+  color: #34495e; /* Giữ màu chữ mặc định */
+}
+
+/* Style the dropdown options */
+.form-select option {
+  background-color: white; /* Nền trắng cho các option */
+  color: #34495e; /* Chữ màu tối */
 }
 
 .btn-filter {

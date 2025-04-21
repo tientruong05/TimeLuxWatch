@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="bg">
     <div class="logo-header">
       <router-link to="/" class="logo-link">
         <svg class="logo" width="80" height="80" viewBox="0 0 80 80">
@@ -127,16 +127,7 @@ const submitForm = async () => {
 </script>
 
 <style scoped>
-/* CSS giữ nguyên từ HTML gốc */
-@import url("https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap");
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css");
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body {
+.bg {
   background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
   display: flex;
   justify-content: center;

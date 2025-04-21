@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="bg">
     <div class="logo-header">
       <router-link to="/" class="logo-link">
         <svg class="logo" width="80" height="80" viewBox="0 0 80 80">
@@ -171,6 +171,29 @@ const registerAlertClass = computed(() =>
 onMounted(() => {
   setLoginPageStatus(true);
   checkAuthenticationStatus();
+
+  // Check for activation message from URL
+  const activationStatus = route.query.activation;
+  const activationMessage = route.query.message;
+  if (activationStatus && activationMessage) {
+    try {
+      const decodedMessage = decodeURIComponent(activationMessage);
+      if (activationStatus === "success") {
+        // Use loginMessage to display success on the login form side
+        loginMessage.value = decodedMessage;
+      } else if (activationStatus === "error") {
+        loginMessage.value = decodedMessage;
+      } else {
+        // Handle 'info' or other statuses if needed
+        loginMessage.value = decodedMessage;
+      }
+      // Optionally clear the query params from URL after reading
+      // router.replace({ query: {} }); // Be careful with timing if checkAuthenticationStatus also redirects
+    } catch (e) {
+      console.error("Error decoding activation message:", e);
+      loginMessage.value = "Lỗi xử lý thông báo kích hoạt.";
+    }
+  }
 });
 
 // Xóa đánh dấu khi rời trang
@@ -274,6 +297,35 @@ const handleRegister = async () => {
   isRegistering.value = true;
   registerMessage.value = "";
 
+  if (!register.value.password) {
+    registerMessage.value = "Vui lòng nhập mật khẩu.";
+    isRegistering.value = false;
+    return;
+  }
+  // Password length validation (e.g., minimum 6 characters)
+  if (register.value.password.length < 6) {
+    registerMessage.value = "Mật khẩu phải có ít nhất 6 ký tự.";
+    isRegistering.value = false;
+    return;
+  }
+
+  // Address validation (basic check)
+  if (!register.value.address?.trim()) {
+    registerMessage.value = "Vui lòng nhập địa chỉ.";
+    isRegistering.value = false;
+    return;
+  }
+
+  // Phone number validation (Vietnamese format: starts with 0, 10 digits total)
+  const phoneRegex = /^0\d{9}$/;
+  if (!register.value.phone || !phoneRegex.test(register.value.phone)) {
+    registerMessage.value =
+      "Số điện thoại không hợp lệ (phải bắt đầu bằng 0 và có 10 chữ số).";
+    isRegistering.value = false;
+    return;
+  }
+  // --- End Validation ---
+
   try {
     const formData = new URLSearchParams();
     formData.append("fullname", register.value.fullname);
@@ -312,18 +364,13 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
-@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css");
-@import url("https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css");
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
-/* Copy toàn bộ phần CSS từ HTML gốc vào đây hoặc giữ lại tách riêng */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
+.bg {
   background: #1a1a1a;
   background-image: linear-gradient(to bottom right, #1a1a1a, #2c2c2c);
   display: flex;

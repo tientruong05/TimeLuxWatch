@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/discounts")
@@ -64,39 +65,43 @@ public class DiscountApiController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getDiscountById(@PathVariable int id) {
+    @GetMapping("/edit-data/{id}")
+    public ResponseEntity<Map<String, Object>> getDiscountEditData(@PathVariable int id) {
         Map<String, Object> response = new HashMap<>();
-        DiscountEntity discount = discountRepository.findById(id).orElse(null);
-        if (discount != null) {
-            List<CategoryEntity> categories = categoryRepository.findAll();
-            List<SubCategoryEntity> subCategories = subCategoryRepository.findAll();
-            List<ProductEntity> products = productRepository.findAll();
-            List<DiscountDetailEntity> discountDetails = discountDetailRepository.findByDiscount(discount);
+        
+        List<CategoryEntity> allCategories = categoryRepository.findAll();
+        List<SubCategoryEntity> allSubCategories = subCategoryRepository.findAll();
+        List<ProductEntity> allProductEntities = productRepository.findAll();
+        List<Map<String, Object>> allProducts = allProductEntities.stream()
+                .map(p -> Map.<String, Object>of("id", p.getId(), "name", p.getName(), "subCategory", p.getSubCategory()))
+                .collect(Collectors.toList());
 
-            List<ProductDTO> productDTOs = new ArrayList<>();
-            for (ProductEntity product : products) {
-                ProductDTO dto = new ProductDTO();
-                dto.setId(product.getId());
-                dto.setName(product.getName());
-                dto.setImage(product.getImage());
-                dto.setPrice(product.getPrice());
-                dto.setDiscountedPrice(product.getDiscountedPrice());
-                dto.setDiscountPercentage(product.getDiscountPercentage());
-                dto.setDiscounted(product.isDiscounted());
-                productDTOs.add(dto);
+        response.put("allCategories", allCategories);
+        response.put("allSubCategories", allSubCategories);
+        response.put("allProducts", allProducts);
+
+        if (id > 0) {
+            DiscountEntity discount = discountRepository.findById(id).orElse(null);
+            if (discount != null) {
+                List<DiscountDetailEntity> details = discountDetailRepository.findByDiscount(discount);
+                List<CategoryEntity> selectedCategories = details.stream().filter(d -> d.getCategory() != null).map(DiscountDetailEntity::getCategory).distinct().collect(Collectors.toList());
+                List<SubCategoryEntity> selectedSubCategories = details.stream().filter(d -> d.getSubCategory() != null).map(DiscountDetailEntity::getSubCategory).distinct().collect(Collectors.toList());
+                List<Integer> selectedProductIds = details.stream().filter(d -> d.getProduct() != null).map(d -> d.getProduct().getId()).distinct().collect(Collectors.toList());
+                List<Map<String, Object>> selectedProducts = allProducts.stream()
+                    .filter(p -> selectedProductIds.contains((Integer)p.get("id")))
+                    .collect(Collectors.toList());
+
+                response.put("discount", discount);
+                response.put("selectedCategories", selectedCategories);
+                response.put("selectedSubCategories", selectedSubCategories);
+                response.put("selectedProducts", selectedProducts);
+                
+            } else {
+                return ResponseEntity.notFound().build();
             }
-
-            response.put("discount", discount);
-            response.put("categories", categories);
-            response.put("subCategories", subCategories);
-            response.put("products", productDTOs);
-            response.put("discountDetails", discountDetails);
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("error", "Không tìm thấy mã giảm giá với ID: " + id);
-            return ResponseEntity.notFound().build();
         }
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/edit/{id}")
@@ -109,11 +114,26 @@ public class DiscountApiController {
             @RequestParam(value = "productIds", required = false) List<Integer> productIds) {
         Map<String, Object> response = new HashMap<>();
         discount.setId(id);
-        discountRepository.save(discount);
+        
+        DiscountEntity existingDiscount = discountRepository.findById(id).orElse(null);
+        if (existingDiscount == null) {
+            response.put("error", "Không tìm thấy mã giảm giá với ID: " + id);
+            return ResponseEntity.notFound().build();
+        }
+        
+        existingDiscount.setDiscountName(discount.getDiscountName());
+        existingDiscount.setDiscountValue(discount.getDiscountValue());
+        existingDiscount.setStartDate(discount.getStartDate());
+        existingDiscount.setEndDate(discount.getEndDate());
+        existingDiscount.setStatus(discount.getStatus());
+        
+        discountRepository.save(existingDiscount);
+        
         discountDetailRepository.deleteByDiscountId(id);
         saveDiscountDetails(id, categoryIds, subCategoryIds, productIds);
+        
         response.put("message", "Cập nhật mã giảm giá thành công");
-        response.put("discount", discount);
+        response.put("discount", existingDiscount);
         return ResponseEntity.ok(response);
     }
 

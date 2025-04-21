@@ -60,13 +60,64 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUser(UserEntity user) {
-        Optional.ofNullable(user).ifPresent(userRepository::save);
+    public void updateUser(UserEntity updatedUserData) {
+        // Check if the user data itself or its ID is null (ID is primitive int, check against 0 or handle appropriately if ID can be 0 legitimately)
+        if (updatedUserData == null || updatedUserData.getId() == 0) { // Assuming ID > 0 for valid users
+            System.err.println("Attempted to update user with null data or invalid ID (0).");
+            // Decide whether to return or throw an exception based on requirements
+            // throw new IllegalArgumentException("User data or ID cannot be null/invalid for update.");
+            return; // Hoặc throw exception
+        }
+
+        // 1. Fetch the existing user from the database
+        Optional<UserEntity> existingUserOpt = userRepository.findById(updatedUserData.getId());
+
+        if (existingUserOpt.isPresent()) {
+            UserEntity existingUser = existingUserOpt.get();
+
+            // 2. Update only the allowed fields, preserving the password
+            existingUser.setUsername(updatedUserData.getUsername()); // Username might change if allowed by controller logic
+            existingUser.setEmail(updatedUserData.getEmail());
+            existingUser.setFullName(updatedUserData.getFullName());
+            existingUser.setPhone(updatedUserData.getPhone());
+            existingUser.setAddress(updatedUserData.getAddress()); // Update address
+            existingUser.setRole(updatedUserData.isRole());       // Update role
+            existingUser.setStatus(updatedUserData.isStatus());   // Update status
+            // DO NOT update the password here unless specifically handled
+            // existingUser.setPassword(updatedUserData.getPassword()); // <- Avoid this line
+
+            // 3. Save the updated existing entity
+            userRepository.save(existingUser);
+        } else {
+            // Handle case where user to update is not found
+            System.err.println("User with ID " + updatedUserData.getId() + " not found for update.");
+            // Optionally throw an exception
+             throw new RuntimeException("Không tìm thấy người dùng với ID: " + updatedUserData.getId());
+        }
     }
 
     @Override
     public void deleteUser(int id) {
-        Optional.of(id).filter(i -> i > 0).ifPresent(userRepository::deleteById);
+        if (id <= 0) return;
+        
+        // Check if user exists before attempting delete
+        if (!userRepository.existsById(id)) {
+             System.err.println("User with ID " + id + " not found for deletion.");
+             throw new RuntimeException("Không tìm thấy người dùng với ID: " + id);
+        }
+
+        try {
+            userRepository.deleteById(id);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Catch specific exception for foreign key violations
+            System.err.println("Error deleting user ID " + id + " due to data integrity violation: " + e.getMessage());
+            // Throw a more specific/user-friendly exception or handle as needed
+            throw new RuntimeException("Không thể xóa người dùng này vì có dữ liệu liên quan (ví dụ: đơn hàng).", e);
+        } catch (Exception e) {
+            // Catch other potential errors during delete
+            System.err.println("Error deleting user ID " + id + ": " + e.getMessage());
+            throw new RuntimeException("Lỗi không mong muốn khi xóa người dùng.", e); // Re-throw general exception
+        }
     }
 
     @Override
