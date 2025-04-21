@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/crud/subcategories")
-public class SubCategoryCRUDApiController {
+@RequestMapping("/api/crud/categories")
+public class CategoryCRUDApiController {
 
     @Autowired
     private SubCategoryService subCategoryService;

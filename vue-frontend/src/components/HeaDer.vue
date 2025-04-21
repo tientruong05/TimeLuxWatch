@@ -96,24 +96,36 @@
                 <a class="nav-link text-uppercase" href="#">Quản lý</a>
                 <ul class="dropdown-menu">
                   <li>
-                    <a class="dropdown-item" href="/crud/subcategories"
-                      >QL thể loại</a
+                    <router-link
+                      :to="{ name: 'AdminCategories' }"
+                      class="dropdown-item"
                     >
+                      QL thương hiệu
+                    </router-link>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="/admin/discounts"
-                      >QL giảm giá</a
+                    <router-link
+                      :to="{ name: 'AdminDiscounts' }"
+                      class="dropdown-item"
                     >
+                      QL giảm giá
+                    </router-link>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="/crud/products"
-                      >QL mặt hàng</a
+                    <router-link
+                      :to="{ name: 'AdminProducts' }"
+                      class="dropdown-item"
                     >
+                      QL sản phẩm
+                    </router-link>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="/crud/users"
-                      >QL người dùng</a
+                    <router-link
+                      :to="{ name: 'AdminUsers' }"
+                      class="dropdown-item"
                     >
+                      QL người dùng
+                    </router-link>
                   </li>
                 </ul>
               </li>
@@ -121,28 +133,42 @@
               <!-- Người dùng (Đã đăng nhập) -->
               <li class="nav-item dropdown" v-if="user">
                 <a class="nav-link text-uppercase" href="#">Người dùng</a>
-                <ul class="dropdown-menu">
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="userDropdown"
+                >
                   <li>
-                    <router-link class="dropdown-item" to="/change-password"
-                      >Đổi mật khẩu</router-link
-                    >
+                    <router-link to="/profile" class="dropdown-item">
+                      <i class="bi bi-person-circle me-2"></i>Thông tin cá nhân
+                    </router-link>
                   </li>
                   <li>
-                    <router-link class="dropdown-item" to="/profile"
-                      >Thông tin tài khoản</router-link
-                    >
-                  </li>
-                  <li>
-                    <a class="dropdown-item" href="/users/orders"
-                      >Đơn hàng của tôi</a
-                    >
+                    <router-link to="/users/orders" class="dropdown-item">
+                      <i class="bi bi-box-seam me-2"></i>Đơn hàng của tôi
+                    </router-link>
                   </li>
                   <li>
                     <router-link
-                      class="dropdown-item"
                       to="/users/shopping-history"
-                      >Lịch sử mua sắm</router-link
+                      class="dropdown-item"
                     >
+                      <i class="bi bi-clock-history me-2"></i>Lịch sử mua hàng
+                    </router-link>
+                  </li>
+                  <!-- Add User Management Link for Admins -->
+                  <li v-if="isAdmin">
+                    <router-link
+                      :to="{ name: 'AdminUsers' }"
+                      class="dropdown-item"
+                    >
+                      <i class="bi bi-people-fill me-2"></i>Quản lý người dùng
+                    </router-link>
+                  </li>
+                  <!-- Add Change Password Link -->
+                  <li>
+                    <router-link to="/change-password" class="dropdown-item">
+                      <i class="bi bi-key-fill me-2"></i>Đổi mật khẩu
+                    </router-link>
                   </li>
                 </ul>
               </li>
@@ -152,14 +178,20 @@
                 <a class="nav-link text-uppercase" href="#">Thống kê</a>
                 <ul class="dropdown-menu">
                   <li>
-                    <a class="dropdown-item" href="/statistics/business"
-                      >Doanh thu</a
+                    <router-link
+                      :to="{ name: 'BusinessStatistics' }"
+                      class="dropdown-item"
                     >
+                      Doanh thu
+                    </router-link>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="/statistics/customers"
-                      >Khách hàng</a
+                    <router-link
+                      :to="{ name: 'VipCustomers' }"
+                      class="dropdown-item"
                     >
+                      Khách hàng
+                    </router-link>
                   </li>
                 </ul>
               </li>

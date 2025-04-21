@@ -63,6 +63,11 @@ public class ProductCRUDApiController {
         response.put("categories", categoryService.getAllCategories());
         response.put("subcategories", subCategoryService.getAllSubCategories());
 
+        // Log the final response map before sending
+        System.out.println("--- ProductCRUDApiController Response Data ---");
+        System.out.println(response);
+        System.out.println("---------------------------------------------");
+
         return ResponseEntity.ok(response);
     }
 

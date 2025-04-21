@@ -13,17 +13,21 @@ import ProductDetailPage from "@/views/ProductDetailPage.vue";
 import LoginRegister from "@/components/LoginRegister.vue";
 import ForgotPass from "@/components/ForgotPass.vue";
 import Logout from "@/components/Logout.vue";
-import FlashSale from "@/components/FlashSale.vue"; // Import component Flash Sale
-import ProfilePage from "@/components/profilePage.vue"; // Import Profile Page component
+import FlashSale from "@/components/FlashSale.vue";
+import ProfilePage from "@/components/profilePage.vue";
 import PasswordChange from "@/components/change_pw.vue";
 import ShoppingCart from "@/components/cart.vue";
-import OrderPage from "@/components/OrderPage.vue"; // <-- THÊM IMPORT NÀY
-import OrderConfirmation from "@/components/OrderConfirmation.vue"; // <-- THÊM IMPORT NÀY
-import Checkout from "@/components/checkout.vue"; // <-- THÊM IMPORT NÀY
-import ShoppingHistory from "@/components/shoppingHistory.vue"; // <-- ADD THIS IMPORT
-import CategoryProductList from "@/components/CategoryProductList.vue"; // <-- ADD THIS IMPORT
-import GenderProductList from "@/components/GenderProductList.vue"; // <-- ADD THIS IMPORT
-import SearchResultsPage from "@/components/searchPage.vue"; // <-- ADD THIS IMPORT
+import OrderPage from "@/components/OrderPage.vue";
+import OrderConfirmation from "@/components/OrderConfirmation.vue";
+import Checkout from "@/components/checkout.vue";
+import ShoppingHistory from "@/components/shoppingHistory.vue";
+import CategoryProductList from "@/components/CategoryProductList.vue";
+import GenderProductList from "@/components/GenderProductList.vue";
+import SearchResultsPage from "@/components/searchPage.vue";
+import AdminUsers from "@/components/crud_users.vue";
+import AdminProducts from "@/components/CRUDProducts.vue";
+import AdminCategories from "@/components/CRUDCategories.vue";
+import AdminDiscounts from "@/components/CRUDDiscount.vue";
 
 // Define routes
 const routes = [
@@ -115,6 +119,43 @@ const routes = [
     name: "SearchResults",
     component: SearchResultsPage,
     // Props are not typically needed here as search query comes from query params
+  },
+  {
+    path: "/admin/users", // Define the admin route for user management
+    name: "AdminUsers",
+    component: AdminUsers,
+    meta: { requiresAuth: true, requiresAdmin: true }, // Require auth and admin role
+  },
+  {
+    path: "/admin/products", // Define the admin route for product management
+    name: "AdminProducts",
+    component: AdminProducts,
+    meta: { requiresAuth: true, requiresAdmin: true }, // Require auth and admin role
+  },
+  {
+    path: "/admin/categories", // Define the admin route for category management
+    name: "AdminCategories",
+    component: AdminCategories,
+    meta: { requiresAuth: true, requiresAdmin: true }, // Require auth and admin role
+  },
+  {
+    path: "/admin/discounts", // Define the admin route for discount management
+    name: "AdminDiscounts",
+    component: AdminDiscounts,
+    meta: { requiresAuth: true, requiresAdmin: true }, // Require auth and admin role
+  },
+  // Add routes for statistics pages
+  {
+    path: "/statistics/business", // Add route for business statistics
+    name: "BusinessStatistics",
+    component: () => import("@/components/business-statistics.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: "/statistics/customers", // Add route for VIP customers statistics
+    name: "VipCustomers",
+    component: () => import("@/components/VipPage.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
 ];
 

@@ -158,6 +158,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductDTO> getFilteredProducts(String search, Integer categoryId, Integer subCategoryId, Integer status, Pageable pageable) {
+        // Restore original filtering logic
         Page<ProductEntity> productPage = productRepository.findByFilters(search, categoryId, subCategoryId, status, pageable);
 
         return productPage.map(product -> {
@@ -170,7 +171,11 @@ public class ProductServiceImpl implements ProductService {
             productDTO.setDescription(product.getDescription());
             productDTO.setStatus(product.getStatus());
             productDTO.setSubCategory(product.getSubCategory());
-            applyDiscountToProduct(productDTO, product.getId(), categoryId, subCategoryId);
+            // Ensure correct IDs are passed for discount calculation
+             Integer actualCategoryId = (product.getSubCategory() != null && product.getSubCategory().getCategory() != null)
+                                     ? product.getSubCategory().getCategory().getId() : null;
+             Integer actualSubCategoryId = (product.getSubCategory() != null) ? product.getSubCategory().getId() : null;
+             applyDiscountToProduct(productDTO, product.getId(), actualCategoryId, actualSubCategoryId);
             return productDTO;
         });
     }

@@ -34,7 +34,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
 
     @Query(value = "SELECT \r\n"
             + "    c.name AS categoryName, \r\n"
-            + "    sc.sub_categories_name AS subCategoryName, \r\n"
             + "    COALESCE(SUM(od.qty * od.price), 0) AS totalRevenue, \r\n"
             + "    COALESCE(SUM(od.qty), 0) AS totalQty, \r\n"
             + "    COALESCE(MAX(od.price), 0) AS maxPrice, \r\n"
@@ -44,7 +43,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Integer>
             + "JOIN sub_categories sc ON c.id = sc.id_categories\r\n"
             + "JOIN products p ON sc.id = p.id_subcategories\r\n"
             + "JOIN order_detail od ON p.id = od.product_id\r\n"
-            + "GROUP BY c.name, sc.sub_categories_name\r\n"
+            + "GROUP BY c.name\r\n"
             + "ORDER BY totalRevenue DESC",
             nativeQuery = true)
     Page<CategoryRevenueDTO> getCategoryRevenue(Pageable pageable);
