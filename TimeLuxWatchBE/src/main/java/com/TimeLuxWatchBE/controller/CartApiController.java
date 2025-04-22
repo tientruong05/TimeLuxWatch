@@ -285,6 +285,11 @@ public class CartApiController {
 
         cartService.processOrderItems(savedOrder, checkoutItems);
 
+        // Calculate the new cart count AFTER processing items
+        int newCartCount = cartService.getCartCount(user.getId());
+        // Update the session immediately
+        session.setAttribute("cartCount", newCartCount);
+
         try {
             cartService.sendOrderConfirmationEmail(user.getEmail(), savedOrder, checkoutItems, total);
             response.put("message", "Đơn hàng đã được đặt thành công! Vui lòng kiểm tra email.");
@@ -295,6 +300,8 @@ public class CartApiController {
         session.removeAttribute("checkoutItems");
         session.removeAttribute("total");
         response.put("orderId", savedOrder.getId());
+        // Add the new cart count to the response payload
+        response.put("cartCount", newCartCount);
         return ResponseEntity.ok(response);
     }
 

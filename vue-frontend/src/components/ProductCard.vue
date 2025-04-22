@@ -9,7 +9,7 @@
     <!-- Image -->
     <div class="text-center product-image-container">
       <img
-        :src="getImageUrl(product.image)"
+        :src="getFirstImageUrl(product.image)"
         class="product-image"
         :alt="product.name"
         @error="setDefaultImage"
@@ -54,6 +54,7 @@ import { useRouter, useRoute } from "vue-router"; // Import useRoute
 import { useAuthStore } from "@/stores/auth"; // Import Pinia store
 import { useNotificationStore } from "@/stores/notificationStore"; // Import Notification store
 import apiClient from "@/services/api"; // Import apiClient
+import { getFirstImageUrl } from "@/utils/imageUtils"; // <-- Import the new utility
 
 const props = defineProps({
   product: {
@@ -67,13 +68,27 @@ const props = defineProps({
 const formattedPrice = formatPrice;
 
 // Function to construct image URL (adjust path as needed)
-const getImageUrl = (imageName) => {
-  if (!imageName) {
-    return "/placeholder.png"; // Provide a default placeholder image path
-  }
-  // Use full URL including the server domain
-  return `http://localhost:8080/photos/${imageName}`;
-};
+// const getImageUrl = (imageName) => {
+//   if (!imageName) {
+//     return "/placeholder.png"; // Provide a default placeholder image path
+//   }
+//
+//   // Handle multiple images (semicolon-separated)
+//   if (imageName.includes(";")) {
+//     // Extract the first image (main image)
+//     const firstImage = imageName.split(";")[0].trim();
+//     if (firstImage) {
+//       return `http://localhost:8080/photos/${firstImage}`;
+//     }
+//     return "/placeholder.png";
+//   }
+//
+//   // Use full URL including the server domain for single image
+//   return `http://localhost:8080/photos/${imageName}`;
+// };
+
+// Use the imported utility function directly in the template
+// const getImageUrl = getFirstImageUrl; // No longer needed directly in setup if used inline
 
 // Handle image loading errors
 const setDefaultImage = (event) => {
@@ -96,8 +111,9 @@ const addToCartHandler = async (productId) => {
   }
 
   try {
+    // Create form data with the quantity parameter
     const formData = new URLSearchParams();
-    formData.append("quantity", 1); // Add 1 item from product card
+    formData.append("quantity", "1"); // Convert to string - the backend expects a string
 
     const response = await apiClient.post(`/cart/add/${productId}`, formData, {
       headers: {
@@ -107,23 +123,19 @@ const addToCartHandler = async (productId) => {
 
     if (response.data && response.data.message === "success") {
       authStore.updateCartCount(response.data.cartCount); // Update cart count in store
-      // alert("Đã thêm sản phẩm vào giỏ hàng!"); // Simple confirmation
-      // TODO: Add a more sophisticated notification (e.g., toast)
       notificationStore.addNotification(
         "Đã thêm sản phẩm vào giỏ hàng!",
         "success"
-      ); // Use global notification store
+      );
     } else {
       throw new Error(response.data.error || "Không thể thêm vào giỏ hàng");
     }
   } catch (error) {
     console.error("Error adding to cart:", error);
-    // alert(`Lỗi: ${error.message || "Không thể thêm vào giỏ hàng"}`);
-    // TODO: Add a more sophisticated notification (e.g., toast)
     notificationStore.addNotification(
       `Lỗi: ${error.message || "Không thể thêm vào giỏ hàng"}`,
       "danger"
-    ); // Use global notification store
+    );
   }
 };
 

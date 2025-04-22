@@ -112,7 +112,15 @@
         <p class="lead">
           Vui lòng quay lại sau để không bỏ lỡ các ưu đãi đặc biệt!
         </p>
-        <router-link to="/" class="btn btn-primary mt-3">
+        <router-link
+          to="/"
+          class="btn btn-primary mt-3"
+          style="
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+            border-radius: 20px;
+          "
+        >
           Quay lại trang chủ
         </router-link>
       </div>

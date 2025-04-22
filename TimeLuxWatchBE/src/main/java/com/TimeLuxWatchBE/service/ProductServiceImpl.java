@@ -265,48 +265,149 @@ public class ProductServiceImpl implements ProductService {
             // Xử lý status
             product.setStatus(status != null && status.equals("1") ? 1 : 0);
 
-            // Xử lý upload ảnh
+            // Handle the single file case for backward compatibility
             try {
-                Optional.ofNullable(imageFile)
-                        .filter(file -> !file.isEmpty())
-                        .ifPresent(file -> {
+                if (imageFile != null && !imageFile.isEmpty()) {
+                    // Process the single file case
+                    String originalFileName = imageFile.getOriginalFilename();
+                    if (originalFileName != null && originalFileName.contains(".")) {
+                        // Get the path to the resources/static/photos directory
+                        Path resourceDirectory = Paths.get("src","main","resources","static", "photos");
+                        String absolutePath = resourceDirectory.toFile().getAbsolutePath();
+                        
+                        // Add timestamp to ensure unique filenames
+                        String timeStamp = String.valueOf(System.currentTimeMillis());
+                        String uniqueFileName = timeStamp + "_" + originalFileName;
+                        Path targetPath = Paths.get(absolutePath, uniqueFileName);
+
+                        System.out.println("Target image save path: " + targetPath.toString());
+
+                        Files.createDirectories(targetPath.getParent()); // Ensure directory exists
+                        Files.copy(imageFile.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        
+                        product.setImage(uniqueFileName);
+                    }
+                }
+
+                // Handle case when no new images are provided
+                if (product.getImage() == null) {
+                    if (id == null || id == 0) {
+                        product.setImage("default.png");
+                    } else {
+                        if (existingImage == null || existingImage.isEmpty()) {
+                            return "Ảnh hiện tại không hợp lệ";
+                        }
+                        product.setImage(existingImage);
+                    }
+                }
+            } catch (RuntimeException e) {
+                return e.getMessage();
+            }
+
+            // Lưu sản phẩm
+            productRepository.save(product);
+            return null; // Thành công, không có lỗi
+        } catch (Exception e) {
+            return "Lỗi khi lưu sản phẩm: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * Enhanced version of saveProductFromForm that handles multiple image files
+     */
+    public String saveProductWithMultipleImages(String name, Integer categoryId, Integer subCategoryId, String priceStr, Integer qty,
+                                       String description, String status, List<MultipartFile> imageFiles, Integer id, String existingImage) {
+        try {
+            ProductEntity product;
+            if (id == null || id == 0) {
+                product = new ProductEntity();
+            } else {
+                product = productRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
+            }
+
+            product.setId(id != null ? id : 0);
+            product.setName(name);
+            product.setQty(qty);
+            product.setDescription(description);
+
+            // Xử lý giá
+            float price;
+            try {
+                price = Float.parseFloat(priceStr);
+                if (price < 0) {
+                    return "Giá phải lớn hơn hoặc bằng 0";
+                }
+            } catch (NumberFormatException e) {
+                return "Giá không hợp lệ";
+            }
+            product.setPrice(price);
+
+            // Xử lý Category
+            Optional<CategoryEntity> category = Optional.ofNullable(categoryService.getCategoryById(categoryId));
+            if (!category.isPresent()) {
+                return "Loại hàng không hợp lệ";
+            }
+
+            // Xử lý SubCategory
+            Optional<SubCategoryEntity> subCategory = Optional.ofNullable(subCategoryService.getSubCategoryById(subCategoryId));
+            if (!subCategory.isPresent()) {
+                return "Hãng không hợp lệ";
+            }
+            if (subCategory.get().getCategory().getId() != categoryId) {
+                return "Hãng không thuộc loại hàng đã chọn";
+            }
+            product.setSubCategory(subCategory.get());
+
+            // Xử lý status
+            product.setStatus(status != null && status.equals("1") ? 1 : 0);
+            
+            // Xử lý upload nhiều ảnh
+            try {
+                if (imageFiles != null && !imageFiles.isEmpty()) {
+                    StringBuilder imageNames = new StringBuilder();
+                    
+                    for (MultipartFile file : imageFiles) {
+                        if (file != null && !file.isEmpty()) {
                             String originalFileName = file.getOriginalFilename();
                             if (originalFileName == null || !originalFileName.contains(".")) {
-                                throw new RuntimeException("Tên file không hợp lệ.");
+                                continue; // Skip invalid files
                             }
 
-                            // --- Change Target Path Logic --- 
                             try {
                                 // Get the path to the resources/static/photos directory
-                                // This works well in standard Maven/Gradle project structures during development
                                 Path resourceDirectory = Paths.get("src","main","resources","static", "photos");
                                 String absolutePath = resourceDirectory.toFile().getAbsolutePath();
-                                Path targetPath = Paths.get(absolutePath, originalFileName);
+                                
+                                // Add timestamp to ensure unique filenames
+                                String timeStamp = String.valueOf(System.currentTimeMillis());
+                                String uniqueFileName = timeStamp + "_" + originalFileName;
+                                Path targetPath = Paths.get(absolutePath, uniqueFileName);
 
-                                System.out.println("Target image save path: " + targetPath.toString()); // Log path for debugging
+                                System.out.println("Target image save path: " + targetPath.toString());
 
                                 Files.createDirectories(targetPath.getParent()); // Ensure directory exists
-                                
-                                // Handle potential file overwrites or renaming
-                                if (Files.exists(targetPath)) {
-                                    try {
-                                        Files.deleteIfExists(targetPath);
-                                    } catch (IOException e) {
-                                         // If delete fails, try renaming (less ideal)
-                                        String newFileName = System.currentTimeMillis() + "_" + originalFileName;
-                                        targetPath = Paths.get(absolutePath, newFileName);
-                                        System.out.println("File existed, trying new path: " + targetPath.toString());
-                                    }
-                                }
                                 Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-                                product.setImage(targetPath.getFileName().toString());
-
+                                
+                                // Add semicolon as delimiter between image names
+                                if (imageNames.length() > 0) {
+                                    imageNames.append(";");
+                                }
+                                imageNames.append(uniqueFileName);
                             } catch (IOException e) {
-                                throw new RuntimeException("Không thể lưu ảnh: " + e.getMessage(), e);
+                                System.err.println("Error saving file: " + originalFileName + " - " + e.getMessage());
+                                // Continue with next file even if one fails
                             }
-                            // --- End Change Target Path Logic ---
-                        });
+                        }
+                    }
+                    
+                    // Only update the image if we successfully saved at least one
+                    if (imageNames.length() > 0) {
+                        product.setImage(imageNames.toString());
+                    }
+                }
 
+                // Handle case when no new images are provided
                 if (product.getImage() == null) {
                     if (id == null || id == 0) {
                         product.setImage("default.png");

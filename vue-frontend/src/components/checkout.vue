@@ -270,14 +270,23 @@ export default {
           authStore.isAuthCheckPending = true;
           console.log("Checkout.vue: Setting isAuthCheckPending flag to true.");
 
-          // Use the new refreshCartCount method to update cart count
-          try {
-            console.log("Checkout.vue: Refreshing cart count after checkout");
-            await authStore.refreshCartCount();
-          } catch (countError) {
-            console.error("Error refreshing cart count:", countError);
-            // If refreshing fails, set to 0 as fallback
+          // Update cart count directly from the response
+          if (
+            response.data.cartCount !== undefined &&
+            typeof response.data.cartCount === "number"
+          ) {
+            console.log(
+              `Checkout.vue: Updating cart count directly from response: ${response.data.cartCount}`
+            );
+            authStore.updateCartCount(response.data.cartCount);
+          } else {
+            // Fallback if cartCount is not in response (should not happen now, but good practice)
+            console.warn(
+              "Checkout.vue: cartCount not found in response, setting to 0 as fallback."
+            );
             authStore.updateCartCount(0);
+            // Optionally, you could still call refreshCartCount here as a deeper fallback
+            // await authStore.refreshCartCount();
           }
 
           setTimeout(() => {

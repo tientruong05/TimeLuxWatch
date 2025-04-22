@@ -171,7 +171,6 @@ onMounted(() => {
 body {
   background: #111111;
   color: #d4af37;
-  font-family: "Helvetica Neue", Arial, sans-serif;
 }
 
 h1 {

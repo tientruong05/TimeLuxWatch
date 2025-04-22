@@ -104,16 +104,9 @@ public class CartServiceImpl implements CartService {
         ProductEntity product = productService.getProductById(productId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
 
-        if (!validateStock(productId, quantity)) {
-            return "error: Số lượng tồn kho không đủ (" + product.getQty() + " sản phẩm)";
-        }
-
         CartEntity cartItem = findByUserAndProduct(user.getId(), productId)
                 .map(item -> {
                     int newQty = item.getQty() + quantity;
-                    if (newQty > product.getQty()) {
-                        throw new RuntimeException("Số lượng vượt quá tồn kho (" + product.getQty() + " sản phẩm)");
-                    }
                     item.setQty(newQty);
                     return item;
                 })
@@ -130,10 +123,6 @@ public class CartServiceImpl implements CartService {
 
         ProductEntity product = cartItem.getProduct();
         
-        if (quantity > product.getQty()) {
-            return "error: Số lượng vượt quá tồn kho (" + product.getQty() + " sản phẩm)";
-        }
-
         if (quantity <= 0) {
             deleteCartItem(itemId);
         } else {

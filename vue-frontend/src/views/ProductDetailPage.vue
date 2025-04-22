@@ -2,18 +2,50 @@
   <div class="product-detail-page section" v-if="!loading && productData">
     <div class="container">
       <div class="row">
-        <!-- Product Image -->
+        <!-- Product Image Gallery -->
         <div class="col-md-6">
-          <div class="product-image">
-            <div v-if="product.discountPercentage > 0" class="discount-badge">
-              <span>{{ Math.round(product.discountPercentage) }}%</span>
-              <span>OFF</span>
+          <div class="product-gallery-container">
+            <!-- Main Image -->
+            <div class="main-image-wrapper mb-3">
+              <div
+                v-if="product && product.discountPercentage > 0"
+                class="discount-badge"
+              >
+                <span>{{ Math.round(product.discountPercentage) }}%</span>
+                <span>OFF</span>
+              </div>
+              <img
+                :src="currentMainImage"
+                :alt="product ? product.name : 'Product Image'"
+                class="main-product-image img-fluid"
+                @error="setDefaultImage"
+              />
             </div>
-            <img
-              :src="getImageUrl(product.image)"
-              :alt="product.name"
-              @error="setDefaultImage"
-            />
+
+            <!-- Swiper Thumbnail Slider -->
+            <swiper
+              v-if="productImages.length > 1"
+              :modules="swiperModules"
+              :slides-per-view="4"
+              :space-between="10"
+              :navigation="true"
+              :pagination="{ clickable: true }"
+              class="thumbnail-swiper"
+            >
+              <swiper-slide
+                v-for="(image, index) in productImages"
+                :key="`thumb-${index}`"
+                class="thumbnail-slide"
+                :class="{ active: currentImageIndex === index }"
+                @click="setMainImage(index)"
+              >
+                <img
+                  :src="image"
+                  :alt="`${product ? product.name : 'Thumbnail'} ${index + 1}`"
+                  class="img-fluid"
+                />
+              </swiper-slide>
+            </swiper>
           </div>
         </div>
 
@@ -190,6 +222,13 @@ import { formatPrice } from "@/utils/formatters";
 import ProductCard from "@/components/ProductCard.vue";
 import { useAuthStore } from "@/stores/auth"; // Import Pinia store
 
+// Swiper Imports
+import { Swiper, SwiperSlide } from "swiper/vue";
+import { Navigation, Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore(); // Initialize auth store
@@ -200,6 +239,7 @@ const quantity = ref(1);
 const showQuantityWarning = ref(false);
 const loading = ref(true); // Start in loading state
 const error = ref(null);
+const currentImageIndex = ref(0); // For tracking the selected image
 
 // Computed property to easily access the main product detail
 const product = computed(() => productData.value?.product);
@@ -208,6 +248,95 @@ const relatedProducts = computed(
   () => productData.value?.relatedProducts || []
 );
 
+// --- NEW: Computed property for processing images ---
+const productImages = computed(() => {
+  console.log("--- ProductDetailPage: [Computed] productImages START ---");
+  const imageString = product.value?.image;
+
+  if (!imageString) {
+    console.log(
+      "ProductDetailPage: [Computed] productImages: No image string found. Returning placeholder."
+    );
+    return ["http://localhost:8080/photos/placeholder.png"];
+  }
+  console.log(
+    `ProductDetailPage: [Computed] productImages: Input image string: '${imageString}'`
+  );
+
+  let processedImages = [];
+  const validImageExtensions = [
+    /\.jpg$/i,
+    /\.jpeg$/i,
+    /\.png$/i,
+    /\.gif$/i,
+    /\.webp$/i,
+  ];
+
+  try {
+    if (imageString.includes(";")) {
+      console.log(
+        "ProductDetailPage: [Computed] productImages: Detected MULTIPLE images."
+      );
+      processedImages = imageString
+        .split(";")
+        .map((img) => img.trim())
+        .filter((trimmed) => {
+          const isValid =
+            trimmed &&
+            validImageExtensions.some((regex) => regex.test(trimmed));
+          if (!isValid)
+            console.warn(
+              `ProductDetailPage: Filtering out invalid segment: '${trimmed}'`
+            );
+          return isValid;
+        })
+        .map((validTrimmed) => `http://localhost:8080/photos/${validTrimmed}`);
+    } else {
+      console.log(
+        "ProductDetailPage: [Computed] productImages: Detected SINGLE image."
+      );
+      const trimmed = imageString.trim();
+      const isValidSingle =
+        trimmed && validImageExtensions.some((regex) => regex.test(trimmed));
+      if (isValidSingle) {
+        processedImages = [`http://localhost:8080/photos/${trimmed}`];
+      } else {
+        console.warn(
+          `ProductDetailPage: Single image '${trimmed}' invalid. Filtering out.`
+        );
+      }
+    }
+  } catch (e) {
+    console.error("ProductDetailPage: Error processing image string:", e);
+    processedImages = [];
+  }
+
+  const finalResult =
+    processedImages.length > 0
+      ? processedImages
+      : ["http://localhost:8080/photos/placeholder.png"];
+  console.log(
+    "ProductDetailPage: [Computed] productImages: Final result:",
+    finalResult
+  );
+  console.log("--- ProductDetailPage: [Computed] productImages END ---");
+  return finalResult;
+});
+
+// --- NEW: Computed property for the main image URL ---
+const currentMainImage = computed(() => {
+  if (productImages.value && productImages.value.length > 0) {
+    return (
+      productImages.value[currentImageIndex.value] ||
+      "http://localhost:8080/photos/placeholder.png"
+    );
+  }
+  return "http://localhost:8080/photos/placeholder.png";
+});
+
+// --- NEW: Swiper setup ---
+const swiperModules = [Navigation, Pagination];
+
 const fetchProductDetails = async (id) => {
   if (!id) return;
   loading.value = true;
@@ -215,38 +344,35 @@ const fetchProductDetails = async (id) => {
   productData.value = null; // Reset data
   quantity.value = 1; // Reset quantity
   showQuantityWarning.value = false;
+  currentImageIndex.value = 0; // Reset image index on new product fetch
   console.log(`Fetching details for product ID: ${id}`);
   try {
-    // Use the correct API endpoint defined in ProductDetailApiController
     const response = await apiClient.get(`/products/detail/${id}`);
     productData.value = response.data;
     console.log("Fetched product details:", productData.value);
-    // Reset quantity if fetched product has 0 quantity
     if (product.value?.qty === 0) {
       quantity.value = 0;
     }
   } catch (err) {
     console.error(`Error fetching product details for ID ${id}:`, err);
     if (err.response && err.response.status === 404) {
-      error.value = "Sản phẩm không được tìm thấy."; // Specific error for 404
+      error.value = "Sản phẩm không được tìm thấy.";
     } else {
       error.value = "Không thể tải chi tiết sản phẩm. Vui lòng thử lại.";
     }
-    productData.value = null; // Ensure no partial data is shown on error
+    productData.value = null;
   } finally {
     loading.value = false;
   }
 };
 
-// Image handling
-const getImageUrl = (imageName) => {
-  if (!imageName) {
-    return "/placeholder.png";
-  }
-  return `http://localhost:8080/photos/${imageName}`;
-};
 const setDefaultImage = (event) => {
   event.target.src = "http://localhost:8080/photos/placeholder.png";
+};
+
+// --- NEW: Method to change main image ---
+const setMainImage = (index) => {
+  currentImageIndex.value = index;
 };
 
 // Quantity controls
@@ -341,8 +467,6 @@ const buyNow = () => {
   handleAddToCart(product.value.id, quantity.value, true); // Pass redirect=true
 };
 
-// --- End Add to Cart / Buy Now Logic ---
-
 // Fetch data when the component mounts
 onMounted(() => {
   fetchProductDetails(productId.value);
@@ -352,8 +476,8 @@ onMounted(() => {
 watch(
   () => route.params.id,
   (newId) => {
-    if (newId !== productId.value) {
-      // Fetch only if ID actually changes
+    if (newId && newId !== productId.value) {
+      // Check if newId is valid
       productId.value = newId;
       fetchProductDetails(newId);
     }
@@ -540,4 +664,80 @@ watch(
   font-size: 0.7rem;
   font-weight: 600;
 }
+
+/* --- Swiper Styles --- */
+.product-gallery-container {
+  /* Container for main image and slider */
+}
+
+.main-image-wrapper {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  position: relative;
+  background-color: #fff; /* Background for image container */
+  padding: 10px; /* Optional padding around main image */
+  min-height: 400px; /* Ensure space while loading */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-product-image {
+  max-width: 100%;
+  max-height: 500px; /* Limit image height */
+  object-fit: contain;
+  display: block;
+}
+
+.thumbnail-swiper {
+  width: 100%;
+  height: auto; /* Let height be determined by content */
+  padding-top: 10px;
+  padding-bottom: 30px;
+}
+
+.thumbnail-slide {
+  /* width is controlled by slides-per-view, don't set fixed width here */
+  aspect-ratio: 1 / 1; /* Make the slide square */
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.thumbnail-slide.active {
+  border-color: #e74c3c;
+}
+
+.thumbnail-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Style Swiper navigation buttons */
+:deep(.swiper-button-next),
+:deep(.swiper-button-prev) {
+  color: #e74c3c; /* Customize arrow color */
+  transform: scale(0.6); /* Make arrows slightly smaller */
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  top: 40%; /* Adjust vertical position */
+}
+:deep(.swiper-button-next:after),
+:deep(.swiper-button-prev:after) {
+  font-size: 16px; /* Adjust arrow icon size */
+  font-weight: bold;
+}
+
+:deep(.swiper-pagination-bullet-active) {
+  background-color: #e74c3c; /* Customize active pagination dot color */
+}
+/* --- End Swiper Styles --- */
 </style>

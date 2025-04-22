@@ -127,7 +127,14 @@
                   </thead>
                   <tbody>
                     <tr v-for="item in orderDetails" :key="item.productName">
-                      <td><img :src="item.image" class="product-img" /></td>
+                      <td>
+                        <img
+                          :src="getFirstImageUrl(item.image)"
+                          class="product-img"
+                          :alt="item.productName"
+                          @error="setDefaultImage"
+                        />
+                      </td>
                       <td>{{ item.productName }}</td>
                       <td>{{ formatCurrency(item.price) }}</td>
                       <td>{{ item.qty }}</td>
@@ -169,6 +176,7 @@
 
 <script>
 import apiClient from "@/services/api";
+import { getFirstImageUrl } from "@/utils/imageUtils";
 
 export default {
   data() {
@@ -189,6 +197,7 @@ export default {
     this.fetchOrders();
   },
   methods: {
+    getFirstImageUrl,
     async fetchOrders() {
       this.error = null;
       try {
@@ -280,6 +289,9 @@ export default {
       this.summary[1].value = `${delivering.length} đơn`;
       this.summary[2].value = `${completed} đơn`;
       this.summary[3].value = this.formatCurrency(totalSpent);
+    },
+    setDefaultImage(event) {
+      event.target.src = "/placeholder.png";
     },
   },
 };

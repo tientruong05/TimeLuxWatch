@@ -14,6 +14,7 @@ import com.TimeLuxWatchBE.service.ProductService;
 import com.TimeLuxWatchBE.service.SubCategoryService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -87,6 +88,32 @@ public class ProductCRUDApiController {
             @RequestParam(value = "existingImage", required = false) String existingImage) {
         Map<String, Object> response = new HashMap<>();
         String error = productService.saveProductFromForm(name, categoryId, subCategoryId, priceStr, qty, description, status, imageFile, id, existingImage);
+        if (error != null) {
+            response.put("error", error);
+            return ResponseEntity.badRequest().body(response);
+        }
+        response.put("message", "Lưu sản phẩm thành công");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/save-with-multiple-images")
+    public ResponseEntity<Map<String, Object>> saveProductWithMultipleImages(
+            @RequestParam("name") String name,
+            @RequestParam("categoryId") Integer categoryId,
+            @RequestParam("subCategoryId") Integer subCategoryId,
+            @RequestParam("price") String priceStr,
+            @RequestParam("qty") Integer qty,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles,
+            @RequestParam(value = "id", defaultValue = "0") Integer id,
+            @RequestParam(value = "existingImage", required = false) String existingImage) {
+        Map<String, Object> response = new HashMap<>();
+        
+        // Log the received files
+        System.out.println("Received " + (imageFiles != null ? imageFiles.size() : 0) + " image files");
+        
+        String error = productService.saveProductWithMultipleImages(name, categoryId, subCategoryId, priceStr, qty, description, status, imageFiles, id, existingImage);
         if (error != null) {
             response.put("error", error);
             return ResponseEntity.badRequest().body(response);

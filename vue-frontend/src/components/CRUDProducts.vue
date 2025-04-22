@@ -45,7 +45,7 @@
               type="text"
               class="form-control search-input"
               v-model="filters.search"
-              placeholder="Tìm kiếm theo tên, loại hàng, hãng..."
+              placeholder="Tìm kiếm theo tên, thương hiệu,..."
             />
           </div>
           <div class="col-lg-2">
@@ -97,8 +97,8 @@
               <th class="col-stt">STT</th>
               <th class="col-name">Tên sản phẩm</th>
               <th class="col-image">Ảnh</th>
-              <th class="col-category">Loại hàng</th>
-              <th class="col-brand">Hãng</th>
+              <th class="col-category">Thương hiệu</th>
+              <th class="col-brand">Giới tính</th>
               <th class="col-price">Giá</th>
               <th class="col-qty">Số lượng</th>
               <th class="col-desc d-lg-table-cell">Mô tả</th>
@@ -194,11 +194,11 @@
             />
             <div class="product-details">
               <p>
-                <strong>Loại hàng:</strong>
+                <strong>Thương hiệu:</strong>
                 {{ product.subCategory?.category?.name || "N/A" }}
               </p>
               <p>
-                <strong>Hãng:</strong>
+                <strong>Giới tính:</strong>
                 {{ product.subCategory?.subCategoriesName || "N/A" }}
               </p>
               <p>
@@ -281,272 +281,17 @@
         </ul>
       </nav>
 
-      <!-- Modal thêm sản phẩm -->
-      <div class="modal fade" id="addProductModal" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Thêm sản phẩm mới</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                @click="closeAddModal"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <form @submit.prevent="saveProduct">
-                <div class="mb-3">
-                  <label class="form-label">Tên sản phẩm</label>
-                  <input
-                    type="text"
-                    v-model="newProduct.name"
-                    class="form-control"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Loại hàng</label>
-                  <select
-                    v-model="newProduct.categoryId"
-                    class="form-select"
-                    required
-                    @change="filterSubCategories"
-                  >
-                    <option value="" disabled selected>Chọn loại hàng</option>
-                    <option
-                      v-for="cat in categories"
-                      :value="cat.id"
-                      :key="cat.id"
-                    >
-                      {{ cat.name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Hãng</label>
-                  <select
-                    v-model="newProduct.subCategoryId"
-                    class="form-select"
-                    required
-                    id="addSubCategory"
-                    :disabled="
-                      !newProduct.categoryId ||
-                      filteredSubCategoriesForAdd.length === 0
-                    "
-                  >
-                    <option value="" disabled selected>Chọn hãng</option>
-                    <option
-                      v-for="subcat in filteredSubCategoriesForAdd"
-                      :value="subcat.id"
-                      :key="subcat.id"
-                    >
-                      {{ subcat.subCategoriesName }}
-                    </option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Giá</label>
-                  <input
-                    type="number"
-                    v-model.number="newProduct.price"
-                    class="form-control"
-                    min="1000000"
-                    step="1000"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Số lượng</label>
-                  <input
-                    type="number"
-                    v-model.number="newProduct.qty"
-                    class="form-control"
-                    min="0"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Mô tả</label>
-                  <textarea
-                    v-model="newProduct.description"
-                    class="form-control"
-                    rows="3"
-                  ></textarea>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Trạng thái</label>
-                  <select v-model="newProduct.status" class="form-select">
-                    <option value="1">Hoạt động</option>
-                    <option value="0">Khóa</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Ảnh</label>
-                  <input
-                    type="file"
-                    ref="addImageFileRef"
-                    class="form-control"
-                    accept="image/*"
-                    @change="handleAddImageChange"
-                  />
-                </div>
-                <div class="modal-footer">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    data-bs-dismiss="modal"
-                    @click="closeAddModal"
-                  >
-                    Đóng
-                  </button>
-                  <button type="submit" class="btn btn-primary">Lưu</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- NEW: Render the Add/Edit Modal Component -->
+      <ProductAddEditModal
+        :show="showModal"
+        :productToEdit="editingProductData"
+        :categories="categories"
+        :subcategories="subcategories"
+        @close="closeModal"
+        @save-success="handleSaveSuccess"
+      />
 
-      <!-- Modal sửa sản phẩm -->
-      <div class="modal fade" id="editProductModal" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Sửa thông tin sản phẩm</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                @click="closeEditModal"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <form @submit.prevent="updateProduct">
-                <div class="mb-3">
-                  <label class="form-label">Tên sản phẩm</label>
-                  <input
-                    type="text"
-                    v-model="editingProduct.name"
-                    class="form-control"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Loại hàng</label>
-                  <select
-                    v-model="editingProduct.categoryId"
-                    class="form-select"
-                    required
-                    @change="filterSubCategoriesEdit"
-                  >
-                    <option value="" disabled>Chọn loại hàng</option>
-                    <option
-                      v-for="cat in categories"
-                      :value="cat.id"
-                      :key="cat.id"
-                    >
-                      {{ cat.name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Hãng</label>
-                  <select
-                    v-model="editingProduct.subCategoryId"
-                    class="form-select"
-                    required
-                    id="editSubCategory"
-                    :disabled="
-                      !editingProduct.categoryId ||
-                      filteredSubCategoriesForEdit.length === 0
-                    "
-                  >
-                    <option value="" disabled>Chọn hãng</option>
-                    <option
-                      v-for="subcat in filteredSubCategoriesForEdit"
-                      :value="subcat.id"
-                      :key="subcat.id"
-                    >
-                      {{ subcat.subCategoriesName }}
-                    </option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Giá</label>
-                  <input
-                    type="number"
-                    v-model.number="editingProduct.price"
-                    class="form-control"
-                    min="1000000"
-                    step="1000"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Số lượng</label>
-                  <input
-                    type="number"
-                    v-model.number="editingProduct.qty"
-                    class="form-control"
-                    min="0"
-                    required
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Mô tả</label>
-                  <textarea
-                    v-model="editingProduct.description"
-                    class="form-control"
-                    rows="3"
-                  ></textarea>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Trạng thái</label>
-                  <select v-model="editingProduct.status" class="form-select">
-                    <option value="1">Hoạt động</option>
-                    <option value="0">Khóa</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Ảnh hiện tại</label>
-                  <div>
-                    <img
-                      :src="getImageUrl(editingProduct.image)"
-                      alt="Current Image"
-                      class="product-image"
-                      @error="setDefaultImage"
-                    />
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Thay đổi ảnh</label>
-                  <input
-                    type="file"
-                    ref="editImageFileRef"
-                    class="form-control"
-                    accept="image/*"
-                    @change="handleEditImageChange"
-                  />
-                </div>
-                <div class="modal-footer">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    data-bs-dismiss="modal"
-                    @click="closeEditModal"
-                  >
-                    Đóng
-                  </button>
-                  <button type="submit" class="btn btn-primary">Lưu</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal xác nhận xóa -->
+      <!-- DELETE Confirmation Modal (Keep as is) -->
       <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
@@ -594,17 +339,15 @@
 </template>
 
 <script setup>
-// Giữ nguyên toàn bộ phần <script> từ file gốc
 import { ref, reactive, computed, onMounted } from "vue";
 import { Modal } from "bootstrap";
 import apiClient from "@/services/api";
 import { formatPrice as formatPriceUtil } from "@/utils/formatters";
+import ProductAddEditModal from "./ProductAddEditModal.vue";
 
 const products = ref([]);
 const categories = ref([]);
 const subcategories = ref([]);
-const filteredSubCategoriesForAdd = ref([]);
-const filteredSubCategoriesForEdit = ref([]);
 
 const filters = reactive({
   search: "",
@@ -619,30 +362,6 @@ const pagination = reactive({
   totalPages: 0,
 });
 
-const newProduct = reactive({
-  name: "",
-  categoryId: "",
-  subCategoryId: "",
-  price: 0,
-  qty: 0,
-  description: "",
-  status: "1",
-  imageFile: null,
-});
-
-const editingProduct = reactive({
-  id: null,
-  name: "",
-  categoryId: "",
-  subCategoryId: "",
-  price: 0,
-  qty: 0,
-  description: "",
-  status: "1",
-  image: "",
-  imageFile: null,
-});
-
 const deletingProduct = reactive({
   id: null,
   name: "",
@@ -651,11 +370,10 @@ const deletingProduct = reactive({
 const successMessage = ref(null);
 const errorMessage = ref(null);
 
-const addModalInstance = ref(null);
-const editModalInstance = ref(null);
 const deleteModalInstance = ref(null);
-const addImageFileRef = ref(null);
-const editImageFileRef = ref(null);
+
+const showModal = ref(false);
+const editingProductData = ref(null);
 
 const visiblePages = computed(() => {
   if (typeof pagination.totalPages !== "number" || pagination.totalPages <= 0) {
@@ -726,20 +444,6 @@ const loadProducts = async (isRetry = false) => {
       subcategories.value = Array.isArray(response.data.subcategories)
         ? response.data.subcategories
         : [];
-      if (
-        filteredSubCategoriesForAdd.value.length === 0 &&
-        subcategories.value.length > 0 &&
-        !newProduct.categoryId
-      ) {
-        filterSubCategories();
-      }
-      if (
-        filteredSubCategoriesForEdit.value.length === 0 &&
-        subcategories.value.length > 0 &&
-        !editingProduct.categoryId
-      ) {
-        filterSubCategoriesEdit();
-      }
     } else {
       console.warn("Invalid response structure from /crud/products");
       products.value = [];
@@ -775,134 +479,28 @@ const changePage = (page) => {
   }
 };
 
-const openAddModal = () => {
-  Object.assign(newProduct, {
-    name: "",
-    categoryId: "",
-    subCategoryId: "",
-    price: 0,
-    qty: 0,
-    description: "",
-    status: "1",
-    imageFile: null,
-  });
+const formatPrice = (price) => {
+  return formatPriceUtil(price);
+};
 
-  if (addImageFileRef.value) {
-    addImageFileRef.value.value = null;
+const setDefaultImage = (event) => {
+  event.target.src = "/placeholder.png";
+};
+
+const getImageUrl = (imageName) => {
+  const baseUrl = "http://localhost:8080";
+  const placeholder = "/placeholder.png";
+  if (!imageName) {
+    return placeholder;
   }
-  filterSubCategories();
-  addModalInstance.value?.show();
-};
-
-const closeAddModal = () => {
-  addModalInstance.value?.hide();
-};
-
-const handleAddImageChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    newProduct.imageFile = file;
-  } else {
-    newProduct.imageFile = null;
-  }
-};
-
-const validatePrice = (price) => {
-  if (typeof price !== "number" || price < 1000000) {
-    errorMessage.value = "Giá sản phẩm phải từ 1.000.000 VND trở lên.";
-    setTimeout(() => (errorMessage.value = null), 4000);
-    return false;
-  }
-  return true;
-};
-
-const saveProduct = async () => {
-  if (!validatePrice(newProduct.price)) return;
-  try {
-    const formData = new FormData();
-    formData.append("name", newProduct.name);
-    formData.append("categoryId", newProduct.categoryId);
-    formData.append("subCategoryId", newProduct.subCategoryId);
-    formData.append("price", newProduct.price.toString());
-    formData.append("qty", newProduct.qty.toString());
-    formData.append("description", newProduct.description || "");
-    formData.append("status", newProduct.status);
-    if (newProduct.imageFile) {
-      formData.append("imageFile", newProduct.imageFile);
+  if (imageName.includes(";")) {
+    const firstImage = imageName.split(";")[0].trim();
+    if (firstImage) {
+      return `${baseUrl}/photos/${firstImage}`;
     }
-    await apiClient.post("/crud/products/save", formData);
-    successMessage.value = "Thêm sản phẩm thành công!";
-    setTimeout(() => (successMessage.value = null), 5000);
-    addModalInstance.value?.hide();
-    loadProducts();
-  } catch (error) {
-    console.error("Error saving product:", error);
-    errorMessage.value = error.response?.data?.error || "Lỗi khi thêm sản phẩm";
-    setTimeout(() => (errorMessage.value = null), 5000);
+    return placeholder;
   }
-};
-
-const openEditModal = (product) => {
-  Object.assign(editingProduct, {
-    id: product.id,
-    name: product.name,
-    categoryId: product.subCategory?.category?.id || "",
-    subCategoryId: product.subCategory?.id || "",
-    price: product.price,
-    qty: product.qty,
-    description: product.description || "",
-    status: product.status.toString(),
-    image: product.image,
-    imageFile: null,
-  });
-
-  if (editImageFileRef.value) {
-    editImageFileRef.value.value = null;
-  }
-  filterSubCategoriesEdit();
-  editModalInstance.value?.show();
-};
-
-const closeEditModal = () => {
-  editModalInstance.value?.hide();
-};
-
-const handleEditImageChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    editingProduct.imageFile = file;
-  } else {
-    editingProduct.imageFile = null;
-  }
-};
-
-const updateProduct = async () => {
-  if (!validatePrice(editingProduct.price)) return;
-  try {
-    const formData = new FormData();
-    formData.append("id", editingProduct.id.toString());
-    formData.append("name", editingProduct.name);
-    formData.append("categoryId", editingProduct.categoryId);
-    formData.append("subCategoryId", editingProduct.subCategoryId);
-    formData.append("price", editingProduct.price.toString());
-    formData.append("qty", editingProduct.qty.toString());
-    formData.append("description", editingProduct.description || "");
-    formData.append("status", editingProduct.status);
-    formData.append("existingImage", editingProduct.image || "");
-    if (editingProduct.imageFile) {
-      formData.append("imageFile", editingProduct.imageFile);
-    }
-    await apiClient.post("/crud/products/save", formData);
-    successMessage.value = "Cập nhật sản phẩm thành công!";
-    setTimeout(() => (successMessage.value = null), 5000);
-    editModalInstance.value?.hide();
-    loadProducts();
-  } catch (error) {
-    console.error("Error updating product:", error);
-    errorMessage.value =
-      error.response?.data?.error || "Lỗi khi cập nhật sản phẩm";
-    setTimeout(() => (errorMessage.value = null), 5000);
-  }
+  return `${baseUrl}/photos/${imageName}`;
 };
 
 const openDeleteModal = (product) => {
@@ -930,64 +528,30 @@ const confirmDelete = async () => {
   }
 };
 
-const filterSubCategories = () => {
-  if (!newProduct.categoryId) {
-    filteredSubCategoriesForAdd.value = [...subcategories.value];
-  } else {
-    filteredSubCategoriesForAdd.value = subcategories.value.filter(
-      (subcat) => subcat.category?.id == newProduct.categoryId
-    );
-  }
-  if (
-    !filteredSubCategoriesForAdd.value.some(
-      (sc) => sc.id == newProduct.subCategoryId
-    )
-  ) {
-    newProduct.subCategoryId = "";
-  }
+const openAddModal = () => {
+  editingProductData.value = null;
+  showModal.value = true;
 };
 
-const filterSubCategoriesEdit = () => {
-  if (!editingProduct.categoryId) {
-    filteredSubCategoriesForEdit.value = [...subcategories.value];
-  } else {
-    filteredSubCategoriesForEdit.value = subcategories.value.filter(
-      (subcat) => subcat.category?.id == editingProduct.categoryId
-    );
-  }
-  if (
-    !filteredSubCategoriesForEdit.value.some(
-      (sc) => sc.id == editingProduct.subCategoryId
-    )
-  ) {
-    editingProduct.subCategoryId = "";
-  }
+const openEditModal = (product) => {
+  editingProductData.value = JSON.parse(JSON.stringify(product));
+  showModal.value = true;
 };
 
-const formatPrice = (price) => {
-  return formatPriceUtil(price);
+const closeModal = () => {
+  showModal.value = false;
+  editingProductData.value = null;
 };
 
-const setDefaultImage = (event) => {
-  event.target.src = "/placeholder.png";
-};
-
-const getImageUrl = (imageName) => {
-  const baseUrl = "http://localhost:8080";
-  const placeholder = "/placeholder.png";
-  if (!imageName) {
-    return placeholder;
-  }
-  return `${baseUrl}/photos/${imageName}`;
+const handleSaveSuccess = (message) => {
+  showModal.value = false;
+  editingProductData.value = null;
+  successMessage.value = message || "Thao tác thành công!";
+  loadProducts();
+  setTimeout(() => (successMessage.value = null), 5000);
 };
 
 onMounted(() => {
-  const addModalEl = document.getElementById("addProductModal");
-  if (addModalEl) addModalInstance.value = new Modal(addModalEl);
-
-  const editModalEl = document.getElementById("editProductModal");
-  if (editModalEl) editModalInstance.value = new Modal(editModalEl);
-
   const deleteModalEl = document.getElementById("deleteConfirmModal");
   if (deleteModalEl) deleteModalInstance.value = new Modal(deleteModalEl);
 
@@ -1006,6 +570,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Import Font Awesome for icons */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
+
 body {
   background: #111111;
   color: #d4af37;
@@ -1570,5 +1137,211 @@ tbody td {
   color: #a0a0a0;
   font-weight: 500;
   opacity: 0.8;
+}
+
+/* Image gallery styling */
+.current-images-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.current-image-item {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  position: relative;
+}
+
+.current-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Media query for mobile devices */
+@media (max-width: 576px) {
+  .current-images-container {
+    justify-content: center;
+  }
+
+  .current-image-item {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+/* New styles for image upload */
+.image-upload-container {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.image-upload-area {
+  border: 2px dashed rgba(212, 175, 55, 0.5);
+  border-radius: 5px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.image-upload-area:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.8);
+}
+
+.image-upload-btn {
+  display: inline-block;
+  color: #d4af37;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  padding: 10px;
+}
+
+.image-upload-btn i {
+  font-size: 1.5rem;
+  margin-right: 10px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.image-preview-list {
+  margin-top: 15px;
+}
+
+.preview-header {
+  margin-bottom: 10px;
+}
+
+.preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.image-preview-item,
+.current-image-item {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+  cursor: grab;
+}
+
+.image-preview-item.is-main,
+.current-image-item.is-main {
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.preview-image,
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-overlay,
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-preview-item:hover .preview-overlay,
+.current-image-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.main-badge {
+  background: #d4af37;
+  color: #111111;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
+
+.btn-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(220, 53, 69, 0.8);
+  border: none;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+  background: rgba(220, 53, 69, 1);
+  transform: scale(1.1);
+}
+
+.no-images-placeholder {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-images-placeholder i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Current images container */
+.current-images-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+/* Media query for mobile devices */
+@media (max-width: 576px) {
+  .preview-container,
+  .current-images-container {
+    justify-content: center;
+  }
+
+  .image-preview-item,
+  .current-image-item {
+    width: 80px;
+    height: 80px;
+  }
 }
 </style>

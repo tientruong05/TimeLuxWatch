@@ -47,13 +47,10 @@
                 <div class="col-4">
                   <div class="d-flex align-items-center">
                     <img
-                      :src="
-                        item.image
-                          ? `http://localhost:8080/photos/${item.image}`
-                          : 'http://localhost:8080/photos/placeholder.jpg'
-                      "
+                      :src="getFirstImageUrl(item.image)"
                       class="product-image me-3"
                       :alt="item.productName"
+                      @error="setDefaultImage"
                     />
                     <h5 class="product-title">{{ item.productName }}</h5>
                   </div>
@@ -179,6 +176,7 @@ import { Toast } from "bootstrap";
 import apiClient from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import ConfirmationModal from "./ConfirmationModal.vue";
+import { getFirstImageUrl } from "@/utils/imageUtils";
 
 export default {
   name: "ShoppingCart",
@@ -200,6 +198,7 @@ export default {
     this.fetchCartData();
   },
   methods: {
+    getFirstImageUrl,
     async fetchCartData() {
       this.error = null;
       try {
@@ -222,23 +221,27 @@ export default {
       const toastId = "toast-" + Date.now();
       const toastEl = document.createElement("div");
       toastEl.id = toastId;
-      toastEl.className = `toast toast-${
-        type === "error" ? "danger" : "success"
-      }`;
+      const bgColorClass = type === "error" ? "bg-danger" : "bg-success";
+      toastEl.className = `toast align-items-center text-white border-0 fade ${bgColorClass}`;
       toastEl.setAttribute("role", "alert");
       toastEl.setAttribute("aria-live", "assertive");
       toastEl.setAttribute("aria-atomic", "true");
 
+      const iconClass =
+        type === "error" ? "fas fa-exclamation-circle" : "fas fa-check-circle";
+
       toastEl.innerHTML = `
-          <div class="toast-header">
-            <strong class="me-auto">Thông báo</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="${iconClass} me-2"></i>
+              ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
           </div>
-          <div class="toast-body">${message}</div>
         `;
 
       toastContainer.appendChild(toastEl);
-      const toast = new Toast(toastEl, { delay: 3000 });
+      const toast = new Toast(toastEl, { delay: 3500, autohide: true });
       toast.show();
 
       toastEl.addEventListener("hidden.bs.toast", () => {
@@ -393,6 +396,9 @@ export default {
         return "0 VNĐ";
       }
       return value.toLocaleString("vi-VN") + " VNĐ";
+    },
+    setDefaultImage(event) {
+      event.target.src = "/placeholder.png";
     },
   },
 };
@@ -613,27 +619,35 @@ body {
   top: 20px;
   right: 20px;
   z-index: 1050;
+  width: auto; /* Allow toast to size based on content */
+  min-width: 250px; /* Minimum width */
+}
+
+/* General Toast Styling */
+.toast {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border-radius: 0.375rem; /* Bootstrap default border radius */
+  opacity: 0.95; /* Slightly transparent */
+  color: #fff; /* Default text color to white for contrast */
+}
+
+.toast .toast-body {
+  padding: 0.75rem 1rem; /* Adjust padding as needed */
+  font-weight: 500;
+}
+
+.toast .btn-close {
+  box-shadow: none;
 }
 
 .toast.show {
-  opacity: 1;
+  opacity: 0.95; /* Ensure opacity is set when shown */
 }
 
-.toast-danger {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.toast-success {
-  background-color: #d1e7dd;
-  color: #0f5132;
-  border: 1px solid #badbcc;
-}
-
-.toast-header {
+/* Remove old header style */
+/* .toast-header {
   font-weight: bold;
-}
+} */
 
 @media (max-width: 992px) {
   .product-title {

@@ -40,4 +40,10 @@ public interface ProductService {
     String saveProductFromForm(String name, Integer categoryId, Integer subCategoryId, String priceStr, Integer qty,
                                String description, String status, MultipartFile imageFile, Integer id, String existingImage);
     String deleteProductById(int id);
+    
+    /**
+     * Enhanced version of saveProductFromForm that handles multiple image files
+     */
+    String saveProductWithMultipleImages(String name, Integer categoryId, Integer subCategoryId, String priceStr, Integer qty,
+                                        String description, String status, List<MultipartFile> imageFiles, Integer id, String existingImage);
 }

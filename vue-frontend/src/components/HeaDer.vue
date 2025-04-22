@@ -229,12 +229,10 @@
                 class="suggestion-item"
                 v-for="suggestion in suggestions"
                 :key="suggestion.id"
-                @click="
-                  console.log('Direct click on suggestion ITEM div registered.')
-                "
+                @click="goToSuggestion(suggestion.id)"
               >
                 <img
-                  :src="getImageUrl(suggestion.image)"
+                  :src="getFirstImageUrl(suggestion.image)"
                   alt="Product Suggestion"
                   class="suggestion-image"
                   @error="handleImageError($event)"
@@ -285,6 +283,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth"; // Import Pinia store
 import apiClient from "@/services/api"; // Import apiClient
+import { getFirstImageUrl } from "@/utils/imageUtils"; // <-- Import the new utility
 
 export default {
   setup() {
@@ -450,12 +449,6 @@ export default {
       }
     };
 
-    // Add helper for image URL generation (if not already global)
-    const getImageUrl = (imageName) => {
-      if (!imageName) return "/placeholder.png";
-      return `http://localhost:8080/photos/${imageName}`;
-    };
-
     // Add handler for suggestion image errors
     const handleImageError = (event) => {
       event.target.src = "/placeholder.png"; // Placeholder image path
@@ -509,7 +502,7 @@ export default {
       loadingBrands,
       errorBrands,
       fetchBrands,
-      getImageUrl,
+      getFirstImageUrl,
       handleImageError,
       goToSuggestion,
     };

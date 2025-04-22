@@ -223,7 +223,6 @@ export default {
 body {
   background-color: #f5f5f5;
   color: #1c1c1c;
-  font-family: "Poppins", sans-serif;
 }
 .container1 {
   max-width: 600px;

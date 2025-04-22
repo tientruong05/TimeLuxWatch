@@ -6,6 +6,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./style.css";
 import App from "./App.vue";
 import { useAuthStore } from "@/stores/auth";
+import { useNotificationStore } from "@/stores/notificationStore";
 
 // Import page components
 import HomePage from "@/views/HomePage.vue";

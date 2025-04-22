@@ -20,6 +20,17 @@ const authStore = useAuthStore();
 // Ref for the toast container element
 const toastContainerRef = ref(null);
 
+// Override the native alert function to use our notification system
+onMounted(() => {
+  const originalAlert = window.alert;
+  window.alert = function (message) {
+    console.log("Alert intercepted:", message);
+    // Use our notification store
+    notificationStore.addNotification(message, "success");
+  };
+  console.log("Alert function overridden to use notifications");
+});
+
 // Computed property to determine if Header/Footer should be shown
 const showLayout = computed(() => {
   // List of route names where the layout should be hidden
@@ -140,9 +151,14 @@ watch(
 </template>
 
 <style>
+/* Import global styles */
+@import "./style.css";
+
 /* Optional: Add some global styles if needed */
 .toast-container {
   /* Adjust z-index if necessary to be above all other elements */
   z-index: 1100 !important;
 }
+
+/* Additional global styling can be added here */
 </style>

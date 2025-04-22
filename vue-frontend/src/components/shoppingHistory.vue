@@ -30,9 +30,7 @@
             <tr v-for="orderDetail in orderDetails" :key="orderDetail.id">
               <td>
                 <img
-                  :src="
-                    'http://localhost:8080/photos/' + orderDetail.product.image
-                  "
+                  :src="getFirstImageUrl(orderDetail.product.image)"
                   alt="Product Image"
                   class="product-image"
                   @error="handleImageError($event)"
@@ -146,6 +144,7 @@
 import apiClient from "@/services/api"; // Import apiClient
 import { useAuthStore } from "@/stores/auth"; // Import AuthStore
 import { mapState } from "pinia"; // To map state easily
+import { getFirstImageUrl } from "@/utils/imageUtils"; // <-- Import the new utility
 
 export default {
   name: "ShoppingHistory",
@@ -168,6 +167,7 @@ export default {
     this.fetchData();
   },
   methods: {
+    getFirstImageUrl,
     async fetchData() {
       this.loading = true;
       this.error = null;
@@ -237,7 +237,7 @@ export default {
       this.fetchData();
     },
     handleImageError(event) {
-      event.target.src = "http://localhost:8080/photos/default.png";
+      event.target.src = "/placeholder.png"; // Use local placeholder
     },
   },
 };
@@ -247,7 +247,6 @@ export default {
 body {
   background: #111111;
   color: #d4af37;
-  font-family: "Helvetica Neue", Arial, sans-serif;
 }
 
 .table-container {
