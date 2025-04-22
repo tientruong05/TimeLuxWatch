@@ -126,16 +126,18 @@
                 <button
                   class="btn btn-buy flex-grow-1"
                   @click="buyNow"
-                  :disabled="product.qty <= 0"
+                  :disabled="product.qty <= 0 || authStore.user?.role"
+                  :class="{ 'admin-disabled': authStore.user?.role }"
                 >
-                  Mua ngay
+                  {{ authStore.user?.role ? "Admin Mode" : "Mua ngay" }}
                 </button>
                 <button
                   class="btn btn-cart flex-grow-1"
                   @click="addToCartHandler"
-                  :disabled="product.qty <= 0"
+                  :disabled="product.qty <= 0 || authStore.user?.role"
+                  :class="{ 'admin-disabled': authStore.user?.role }"
                 >
-                  Thêm vào giỏ
+                  {{ authStore.user?.role ? "Admin Mode" : "Thêm vào giỏ" }}
                 </button>
               </div>
               <div class="quantity-warning mt-2" v-if="showQuantityWarning">
@@ -663,6 +665,23 @@ watch(
 .discount-badge span:last-child {
   font-size: 0.7rem;
   font-weight: 600;
+}
+
+/* Admin disabled button styles */
+.admin-disabled {
+  background-color: #999 !important;
+  color: white !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-buy.admin-disabled:hover,
+.btn-cart.admin-disabled:hover {
+  background-color: #999 !important;
+  transform: none !important;
+  color: white !important;
 }
 
 /* --- Swiper Styles --- */

@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!-- Admin Mode Indicator - Removed -->
+
     <!-- Hero Section with Carousel from InDex.vue -->
     <section class="hero-section mb-5">
       <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
@@ -230,12 +232,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import apiClient from "@/services/api"; // Use alias for cleaner imports
 import ProductCard from "@/components/ProductCard.vue"; // Assuming ProductCard component exists
 import CountdownTimer from "@/components/CountdownTimer.vue"; // Assuming CountdownTimer component exists
 import { formatPrice } from "@/utils/formatters"; // Assuming a utility for formatting
 import "bootstrap/dist/js/bootstrap.bundle.min.js"; // Import Bootstrap JS for carousel
+import { useAuthStore } from "@/stores/auth"; // Import auth store
+
+// Get auth store instance
+const authStore = useAuthStore();
+
+// Check if current user is admin
+const isAdmin = computed(() => authStore.user && authStore.user.role);
 
 const homepageData = ref({});
 const loading = ref(true);
@@ -557,4 +566,6 @@ const formattedPrice = formatPrice;
     font-size: 1rem;
   }
 }
+
+/* Admin Mode Indicator - Removed */
 </style>

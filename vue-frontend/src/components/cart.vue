@@ -281,6 +281,16 @@ export default {
         });
 
         await this.fetchCartData();
+
+        // Update the cart count in the auth store
+        const authStore = useAuthStore();
+        const newCount = this.cartItems.reduce(
+          (sum, item) => sum + item.qty,
+          0
+        );
+        authStore.updateCartCount(newCount);
+        console.log("Cart count updated after quantity change:", newCount);
+
         this.showToast("Cập nhật số lượng thành công", "success");
       } catch (error) {
         console.error("Error updating cart item:", error);
@@ -306,6 +316,16 @@ export default {
       try {
         await apiClient.post(`/cart/remove/${itemId}`);
         await this.fetchCartData();
+
+        // Update the cart count in the auth store
+        const authStore = useAuthStore();
+        const newCount = this.cartItems.reduce(
+          (sum, item) => sum + item.qty,
+          0
+        );
+        authStore.updateCartCount(newCount);
+        console.log("Cart count updated after item removal:", newCount);
+
         this.showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
       } catch (error) {
         console.error("Error removing cart item:", error);

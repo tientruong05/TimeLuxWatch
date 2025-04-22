@@ -40,6 +40,8 @@
       <button
         class="btn btn-shop mt-3 add-to-cart"
         @click="addToCartHandler(product.id)"
+        :disabled="authStore.user && authStore.user.role"
+        :class="{ 'disabled-btn': authStore.user && authStore.user.role }"
       >
         Thêm vào giỏ
       </button>
@@ -273,5 +275,21 @@ const addToCartHandler = async (productId) => {
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(231, 76, 60, 0.3);
+}
+
+/* Admin disabled button style */
+.disabled-btn {
+  background-color: #999 !important;
+  color: white !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.disabled-btn:hover {
+  background-color: #999 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 </style>

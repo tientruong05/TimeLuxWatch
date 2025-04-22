@@ -131,7 +131,7 @@
               </li>
 
               <!-- Người dùng (Đã đăng nhập) -->
-              <li class="nav-item dropdown" v-if="user">
+              <li class="nav-item dropdown" v-if="user && !user.role">
                 <a class="nav-link text-uppercase" href="#">Người dùng</a>
                 <ul
                   class="dropdown-menu dropdown-menu-end"
@@ -153,15 +153,6 @@
                       class="dropdown-item"
                     >
                       <i class="bi bi-clock-history me-2"></i>Lịch sử mua hàng
-                    </router-link>
-                  </li>
-                  <!-- Add User Management Link for Admins -->
-                  <li v-if="isAdmin">
-                    <router-link
-                      :to="{ name: 'AdminUsers' }"
-                      class="dropdown-item"
-                    >
-                      <i class="bi bi-people-fill me-2"></i>Quản lý người dùng
                     </router-link>
                   </li>
                   <!-- Add Change Password Link -->
@@ -263,7 +254,7 @@
           <router-link
             to="/cart"
             class="header-icon position-relative"
-            v-if="user"
+            v-if="user && !user.role"
           >
             <i class="bi bi-bag"></i>
             <span
