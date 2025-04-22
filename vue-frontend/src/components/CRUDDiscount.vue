@@ -146,7 +146,7 @@
                 @click="changePage(currentPage - 1)"
                 aria-label="Previous"
               >
-                <span aria-hidden="true">&laquo;</span>
+                <span aria-hidden="true">«</span>
               </a>
             </li>
             <li v-for="page in visiblePages" :key="page" class="page-item">
@@ -161,7 +161,7 @@
                 @click="changePage(currentPage + 1)"
                 aria-label="Next"
               >
-                <span aria-hidden="true">&raquo;</span>
+                <span aria-hidden="true">»</span>
               </a>
             </li>
           </ul>
@@ -174,15 +174,15 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from "vue";
 import apiClient from "@/services/api";
-import DiscountModal from "./DiscountModal.vue"; // Import the new modal component
+import DiscountModal from "./DiscountModal.vue";
 
 const discounts = ref([]);
 const isLoading = ref(false);
 const message = ref("");
-const messageType = ref("success"); // 'success' or 'error'
+const messageType = ref("success");
 
 const showModal = ref(false);
-const currentDiscountId = ref(null); // null for add, ID for edit
+const currentDiscountId = ref(null);
 
 const showConfirmModal = ref(false);
 const discountToDeleteId = ref(null);
@@ -191,7 +191,6 @@ const discountToDeleteId = ref(null);
 const pagination = reactive({
   currentPage: 0,
   pageSize: 10,
-  // totalPages will be calculated
 });
 
 // --- Computed Properties for Pagination ---
@@ -226,13 +225,10 @@ const visiblePages = computed(() => {
       pagination.currentPage + halfVisible + 1
     );
 
-    // Adjust if near the beginning
     if (pagination.currentPage <= halfVisible + 1) {
       startPage = 2;
       endPage = Math.min(totalPages.value - 1, maxVisible - 1);
-    }
-    // Adjust if near the end
-    else if (pagination.currentPage >= totalPages.value - halfVisible - 2) {
+    } else if (pagination.currentPage >= totalPages.value - halfVisible - 2) {
       startPage = Math.max(2, totalPages.value - maxVisible + 2);
       endPage = totalPages.value - 1;
     }
@@ -256,16 +252,15 @@ const fetchDiscounts = async () => {
   isLoading.value = true;
   message.value = "";
   try {
-    // Use GET /api/discounts to fetch all discounts
     const response = await apiClient.get("/discounts");
-    discounts.value = response.data || []; // Assuming the API returns an array directly
+    discounts.value = response.data || [];
   } catch (err) {
     console.error("Error fetching discounts:", err);
     message.value =
       "Lỗi khi tải danh sách giảm giá: " +
       (err.response?.data?.error || err.message);
     messageType.value = "error";
-    discounts.value = []; // Clear discounts on error
+    discounts.value = [];
   } finally {
     isLoading.value = false;
   }
@@ -273,10 +268,8 @@ const fetchDiscounts = async () => {
 
 // --- Pagination Method ---
 const changePage = (page) => {
-  // page here is 0-indexed from the click event
   if (page >= 0 && page < totalPages.value) {
     pagination.currentPage = page;
-    // No need to call fetchDiscounts with client-side pagination
   }
 };
 
@@ -293,15 +286,14 @@ const openEditModal = (id) => {
 
 const closeModal = () => {
   showModal.value = false;
-  currentDiscountId.value = null; // Reset ID when closing
+  currentDiscountId.value = null;
 };
 
 const handleSave = (successMessage) => {
   closeModal();
   message.value = successMessage || "Lưu giảm giá thành công!";
   messageType.value = "success";
-  fetchDiscounts(); // Refresh the list
-  // Auto-hide message after a few seconds
+  fetchDiscounts();
   setTimeout(() => {
     message.value = "";
   }, 5000);
@@ -321,16 +313,15 @@ const cancelDelete = () => {
 const deleteDiscount = async () => {
   if (!discountToDeleteId.value) return;
 
-  isLoading.value = true; // Indicate loading during delete
+  isLoading.value = true;
   message.value = "";
   const id = discountToDeleteId.value;
 
   try {
-    // Use DELETE /api/discounts/delete/{id}
     await apiClient.delete(`/discounts/delete/${id}`);
     message.value = "Xóa giảm giá thành công!";
     messageType.value = "success";
-    fetchDiscounts(); // Refresh the list after delete
+    fetchDiscounts();
   } catch (err) {
     console.error(`Error deleting discount ${id}:`, err);
     message.value = `Lỗi khi xóa giảm giá: ${
@@ -338,18 +329,15 @@ const deleteDiscount = async () => {
     }`;
     messageType.value = "error";
   } finally {
-    cancelDelete(); // Close confirmation modal
+    cancelDelete();
     isLoading.value = false;
-    // Auto-hide message
     setTimeout(() => {
       message.value = "";
     }, 5000);
 
-    // --- Adjust current page after delete if necessary ---
     if (pagination.currentPage >= totalPages.value && totalPages.value > 0) {
       pagination.currentPage = totalPages.value - 1;
     }
-    // --- End Adjust page ---
   }
 };
 
@@ -361,7 +349,7 @@ const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("vi-VN", options);
   } catch (e) {
     console.error("Error formatting date:", dateString, e);
-    return dateString; // Return original string if formatting fails
+    return dateString;
   }
 };
 
@@ -486,7 +474,7 @@ tbody td {
 }
 
 table thead tr th:nth-child(1) {
-  /* ID */
+  /* STT */
   min-width: 50px;
 }
 table thead tr th:nth-child(2) {
@@ -506,8 +494,12 @@ table thead tr th:nth-child(5) {
   min-width: 120px;
 }
 table thead tr th:nth-child(6) {
-  /* Hành động */
+  /* Trạng thái */
   min-width: 100px;
+}
+table thead tr th:nth-child(7) {
+  /* Hành động */
+  min-width: 150px;
 }
 
 .form-control,

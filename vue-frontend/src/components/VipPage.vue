@@ -55,7 +55,7 @@
         >
           <div v-for="(customers, year) in vipCustomersByYear" :key="year">
             <h2>
-              Năm: {{ year
+              Năm: {{ selectedYear
               }}{{ selectedQuarter ? `, Quý ${selectedQuarter}` : "" }}
             </h2>
             <table>

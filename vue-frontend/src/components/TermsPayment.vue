@@ -255,17 +255,17 @@ export default {
     return {
       paymentImages: [
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../../assets/P1.jpg",
           alt: "Thanh toán tiền mặt",
           caption: "Thanh toán tiền mặt tại cửa hàng",
         },
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../assets/images/credit_card_payment.png",
           alt: "Thanh toán thẻ",
           caption: "Thanh toán bằng thẻ tín dụng/ghi nợ",
         },
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../assets/images/qr_payment.png",
           alt: "Thanh toán QR",
           caption: "Thanh toán qua QR Code",
         },
@@ -316,17 +316,17 @@ export default {
       ],
       installmentImages: [
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../assets/images/financial_company.png",
           alt: "Trả góp qua thẻ tín dụng",
           caption: "Trả góp qua thẻ tín dụng",
         },
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../assets/images/financial_consultation.png",
           alt: "Trả góp qua công ty tài chính",
           caption: "Trả góp qua công ty tài chính",
         },
         {
-          src: "https://placehold.co/600x400/png",
+          src: "../assets/images/installment_advice.png",
           alt: "Tư vấn trả góp",
           caption: "Tư vấn trả góp tại cửa hàng",
         },

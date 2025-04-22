@@ -2,7 +2,7 @@
   <div class="container py-5">
     <div class="table-container">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Quản lý Loại sản phẩm theo Thương hiệu</h2>
+        <h2>Quản lý Thương hiệu</h2>
         <button class="btn btn-success" @click="openAddModal">
           <i class="fas fa-plus me-2"></i>Thêm Loại
         </button>
@@ -55,7 +55,7 @@
       <table class="table table-bordered table-hover">
         <thead class="table-dark">
           <tr>
-            <th>ID</th>
+            <th>STT</th>
             <th>Thương Hiệu</th>
             <th>Loại sản phẩm</th>
             <th>Trạng thái</th>
@@ -68,8 +68,12 @@
               Không có loại sản phẩm nào cho thương hiệu này.
             </td>
           </tr>
-          <tr v-else v-for="subCategory in subCategories" :key="subCategory.id">
-            <td>{{ subCategory.id }}</td>
+          <tr
+            v-else
+            v-for="(subCategory, index) in subCategories"
+            :key="subCategory.id"
+          >
+            <td>{{ index + 1 }}</td>
             <td>{{ subCategory.category?.name || "N/A" }}</td>
             <td>{{ subCategory.subCategoriesName }}</td>
             <td>

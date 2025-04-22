@@ -4,228 +4,129 @@
     tabindex="-1"
     style="background-color: rgba(0, 0, 0, 0.5)"
     @click.self="closeModal"
+    v-if="show"
   >
-    <div
-      class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
-    >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">
-            {{ isEditMode ? "Sửa thông tin sản phẩm" : "Thêm sản phẩm mới" }}
+            {{ isEditMode ? "Chỉnh sửa giảm giá" : "Thêm giảm giá mới" }}
           </h5>
-          <button
-            type="button"
-            class="btn-close"
-            @click="closeModal"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" @click="closeModal"></button>
         </div>
         <div class="modal-body">
-          <!-- Loading/Error for submit -->
-          <div v-if="isSubmitting" class="text-center my-2">
-            <div
-              class="spinner-border spinner-border-sm text-primary"
-              role="status"
-            >
-              <span class="visually-hidden">Đang lưu...</span>
+          <div v-if="isLoading" class="text-center my-3">
+            <div class="spinner-border text-warning" role="status">
+              <span class="visually-hidden">Đang tải...</span>
             </div>
           </div>
-          <div v-if="submitError" class="alert alert-danger py-2">
-            {{ submitError }}
-          </div>
+          <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
-          <form @submit.prevent="saveProduct" novalidate>
+          <form v-if="!isLoading && !error" @submit.prevent="saveDiscount">
             <div class="row">
-              <!-- Left Column: Name, Categories, Price, Qty -->
               <div class="col-md-6">
-                <!-- Name -->
                 <div class="mb-3">
-                  <label for="productName" class="form-label"
-                    >Tên sản phẩm</label
-                  >
+                  <label class="form-label">Tên giảm giá:</label>
                   <input
                     type="text"
+                    v-model="formData.discountName"
                     class="form-control"
-                    id="productName"
-                    v-model.trim="formData.name"
                     required
-                    :class="{ 'is-invalid': errors.name }"
                   />
-                  <div class="invalid-feedback" v-if="errors.name">
-                    {{ errors.name }}
-                  </div>
                 </div>
-
-                <!-- Category -->
                 <div class="mb-3">
-                  <label for="productCategory" class="form-label"
-                    >Thương hiệu</label
-                  >
-                  <select
-                    class="form-select"
-                    id="productCategory"
-                    v-model="formData.categoryId"
-                    @change="filterSubCategoriesLocal"
-                    required
-                    :class="{ 'is-invalid': errors.categoryId }"
-                  >
-                    <option value="" disabled>Chọn thương hiệu</option>
-                    <option
-                      v-for="cat in categories"
-                      :value="cat.id"
-                      :key="cat.id"
-                    >
-                      {{ cat.name }}
-                    </option>
-                  </select>
-                  <div class="invalid-feedback" v-if="errors.categoryId">
-                    {{ errors.categoryId }}
-                  </div>
-                </div>
-
-                <!-- SubCategory -->
-                <div class="mb-3">
-                  <label for="productSubCategory" class="form-label"
-                    >Giới tính</label
-                  >
-                  <select
-                    class="form-select"
-                    id="productSubCategory"
-                    v-model="formData.subCategoryId"
-                    required
-                    :disabled="!formData.categoryId"
-                    :class="{ 'is-invalid': errors.subCategoryId }"
-                  >
-                    <option value="" disabled>Chọn giới tính</option>
-                    <option
-                      v-for="subcat in localFilteredSubcategories"
-                      :value="subcat.id"
-                      :key="subcat.id"
-                    >
-                      {{ subcat.subCategoriesName }}
-                    </option>
-                  </select>
-                  <div class="invalid-feedback" v-if="errors.subCategoryId">
-                    {{ errors.subCategoryId }}
-                  </div>
-                </div>
-
-                <!-- Price -->
-                <div class="mb-3">
-                  <label for="productPrice" class="form-label">Giá (VNĐ)</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="productPrice"
-                    v-model="formattedPrice"
-                    @input="updateRawPrice($event.target.value)"
-                    required
-                    :class="{ 'is-invalid': errors.price }"
-                  />
-                  <div class="invalid-feedback" v-if="errors.price">
-                    {{ errors.price }}
-                  </div>
-                </div>
-
-                <!-- Quantity -->
-                <div class="mb-3">
-                  <label for="productQty" class="form-label">Số lượng</label>
+                  <label class="form-label">Giá trị giảm giá (%):</label>
                   <input
                     type="number"
+                    v-model.number="formData.discountValue"
                     class="form-control"
-                    id="productQty"
-                    v-model.number="formData.qty"
                     min="0"
+                    max="99"
                     required
-                    :class="{ 'is-invalid': errors.qty }"
                   />
-                  <div class="invalid-feedback" v-if="errors.qty">
-                    {{ errors.qty }}
-                  </div>
                 </div>
               </div>
-
-              <!-- Right Column: Description, Status, Image -->
               <div class="col-md-6">
-                <!-- Description -->
                 <div class="mb-3">
-                  <label for="productDescription" class="form-label"
-                    >Mô tả</label
-                  >
-                  <textarea
-                    class="form-control"
-                    id="productDescription"
-                    rows="4"
-                    v-model="formData.description"
-                  ></textarea>
-                </div>
-
-                <!-- Status -->
-                <div class="mb-3">
-                  <label for="productStatus" class="form-label"
-                    >Trạng thái</label
-                  >
-                  <select
-                    class="form-select"
-                    id="productStatus"
-                    v-model="formData.status"
-                    required
-                    :class="{ 'is-invalid': errors.status }"
-                  >
-                    <option value="1">Hoạt động</option>
-                    <option value="0">Khóa</option>
-                  </select>
-                  <div class="invalid-feedback" v-if="errors.status">
-                    {{ errors.status }}
-                  </div>
-                </div>
-
-                <!-- Image Upload -->
-                <div class="mb-3">
-                  <label for="productImageFile" class="form-label"
-                    >Ảnh sản phẩm</label
-                  >
+                  <label class="form-label">Ngày bắt đầu:</label>
                   <input
-                    type="file"
+                    type="date"
+                    v-model="formData.startDate"
                     class="form-control"
-                    id="productImageFile"
-                    ref="imageFileRef"
-                    @change="handleImageChange"
-                    accept="image/png, image/jpeg, image/gif, image/webp"
-                    :class="{ 'is-invalid': errors.imageFile }"
+                    required
                   />
-                  <div class="invalid-feedback" v-if="errors.imageFile">
-                    {{ errors.imageFile }}
-                  </div>
                 </div>
-
-                <!-- Image Preview -->
-                <div class="mb-3 image-preview-container">
-                  <label class="form-label">Xem trước ảnh:</label>
-                  <img
-                    v-if="imagePreviewUrl || formData.existingImage"
-                    :src="
-                      imagePreviewUrl || getImageUrl(formData.existingImage)
-                    "
-                    alt="Xem trước ảnh sản phẩm"
-                    class="img-thumbnail product-image-preview"
-                    @error="setDefaultPreview"
+                <div class="mb-3">
+                  <label class="form-label">Ngày kết thúc:</label>
+                  <input
+                    type="date"
+                    v-model="formData.endDate"
+                    class="form-control"
+                    required
                   />
-                  <p v-else class="text-muted">Chưa chọn ảnh.</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Trạng thái:</label>
+                  <select v-model.number="formData.status" class="form-select">
+                    <option :value="1">Hoạt động</option>
+                    <option :value="0">Không hoạt động</option>
+                  </select>
                 </div>
               </div>
+            </div>
+
+            <hr />
+
+            <!-- Selection Summary -->
+            <div
+              v-if="selectedProducts.length"
+              class="selection-summary mb-3 p-3 border rounded bg-dark"
+            >
+              <h6 class="text-warning mb-2">Sản phẩm áp dụng giảm giá:</h6>
+              <div>
+                <strong>Sản phẩm:</strong>
+                <span
+                  v-for="prod in selectedProducts"
+                  :key="prod.id"
+                  class="badge bg-light text-dark me-1 mb-1"
+                  >{{ prod.name }}</span
+                >
+              </div>
+            </div>
+            <!-- End Selection Summary -->
+
+            <h6 class="text-warning">Chọn sản phẩm để áp dụng giảm giá:</h6>
+            <div class="mb-3">
+              <label class="form-label">Sản phẩm:</label>
+              <VueMultiselect
+                v-model="selectedProducts"
+                :options="allProducts"
+                :multiple="true"
+                :close-on-select="false"
+                :clear-on-select="false"
+                :preserve-search="true"
+                placeholder="Tìm hoặc chọn sản phẩm"
+                label="name"
+                track-by="id"
+                :preselect-first="false"
+              >
+                <template #noResult>Không tìm thấy kết quả.</template>
+              </VueMultiselect>
             </div>
           </form>
         </div>
         <div class="modal-footer">
+          <div v-if="submitError" class="alert alert-danger me-auto py-1 px-2">
+            {{ submitError }}
+          </div>
           <button type="button" class="btn btn-secondary" @click="closeModal">
             Đóng
           </button>
           <button
             type="button"
             class="btn btn-primary"
-            @click="saveProduct"
-            :disabled="isSubmitting"
+            @click="saveDiscount"
+            :disabled="isSubmitting || isLoading"
           >
             {{ isSubmitting ? "Đang lưu..." : "Lưu" }}
           </button>
@@ -236,256 +137,138 @@
 </template>
 
 <script setup>
-import {
-  ref,
-  reactive,
-  watch,
-  computed,
-  defineProps,
-  defineEmits,
-  onMounted,
-} from "vue";
+import { ref, reactive, watch, computed } from "vue";
 import apiClient from "@/services/api";
-import {
-  formatPrice as formatPriceUtil,
-  parseFormattedPrice,
-} from "@/utils/formatters";
+import VueMultiselect from "vue-multiselect";
 
-// --- Props and Emits ---
+// --- Props ---
 const props = defineProps({
-  product: {
-    type: Object,
-    default: null, // Null for add mode, product object for edit mode
+  discountId: {
+    type: Number,
+    default: null,
   },
-  isEditMode: {
+  show: {
     type: Boolean,
     default: false,
   },
-  categories: {
-    type: Array,
-    required: true,
-    default: () => [],
-  },
-  subcategories: {
-    type: Array,
-    required: true,
-    default: () => [],
-  },
 });
 
+// --- Emits ---
 const emit = defineEmits(["close", "save"]);
 
-// --- Reactive State ---
+// --- State ---
 const formData = reactive({
   id: null,
-  name: "",
-  categoryId: "",
-  subCategoryId: "",
-  price: 0, // Store the raw numeric price
-  qty: 0,
-  description: "",
-  status: "1", // Default to active
-  imageFile: null, // Store the File object
-  existingImage: null, // Store the existing image filename for edit mode
+  discountName: "",
+  discountValue: 0,
+  startDate: "",
+  endDate: "",
+  status: 1,
 });
 
-const errors = reactive({
-  name: "",
-  categoryId: "",
-  subCategoryId: "",
-  price: "",
-  qty: "",
-  status: "",
-  imageFile: "",
-});
+const allProducts = ref([]);
+const selectedProducts = ref([]);
 
+const isLoading = ref(false);
 const isSubmitting = ref(false);
+const error = ref(null);
 const submitError = ref(null);
-const localFilteredSubcategories = ref([]);
-const imageFileRef = ref(null); // Ref for the file input element
-const imagePreviewUrl = ref(null); // URL for image preview
 
-// --- Computed Properties ---
+const isEditMode = computed(
+  () => props.discountId !== null && props.discountId > 0
+);
 
-// Computed property for displaying formatted price
-const formattedPrice = computed({
-  get: () => formatPriceUtil(formData.price),
-  set: (newValue) => {
-    // Update the raw price when the formatted price changes
-    formData.price = parseFormattedPrice(newValue);
-  },
-});
+// --- Fetch Data ---
+const fetchModalData = async () => {
+  if (!props.show) {
+    console.log("Modal is not shown, skipping fetchModalData");
+    return;
+  }
 
-// --- Utility Functions ---
-const getImageUrl = (imageName) => {
-  return imageName
-    ? `http://localhost:8080/photos/${imageName}`
-    : "/placeholder.png";
+  console.log("Fetching data for discountId:", props.discountId);
+  isLoading.value = true;
+  error.value = null;
+  submitError.value = null;
+  resetForm();
+
+  try {
+    const fetchId = isEditMode.value ? props.discountId : 0;
+    const response = await apiClient.get(`/discounts/edit-data/${fetchId}`);
+    console.log("API response:", response.data);
+    allProducts.value = response.data.allProducts || [];
+    console.log("allProducts:", allProducts.value);
+
+    if (isEditMode.value && response.data.discount) {
+      const discount = response.data.discount;
+      formData.id = discount.id;
+      formData.discountName = discount.discountName;
+      formData.discountValue = discount.discountValue;
+      formData.startDate = formatDateForInput(discount.startDate);
+      formData.endDate = formatDateForInput(discount.endDate);
+      formData.status = discount.status;
+
+      selectedProducts.value = response.data.selectedProducts || [];
+      console.log("selectedProducts:", selectedProducts.value);
+    }
+  } catch (err) {
+    console.error("Error fetching modal data:", err);
+    error.value =
+      "Lỗi khi tải dữ liệu cho modal: " +
+      (err.response?.data?.error || err.message);
+    allProducts.value = [];
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 // --- Watchers ---
-
-// Watch for prop changes to update form data when editing
 watch(
-  () => props.product,
-  (newProductData) => {
-    resetForm(); // Reset form and errors first
-    if (newProductData && props.isEditMode) {
-      formData.id = newProductData.id;
-      formData.name = newProductData.name || "";
-      formData.categoryId = newProductData.subCategory?.category?.id || "";
-      formData.subCategoryId = newProductData.subCategory?.id || "";
-      formData.price = newProductData.price || 0;
-      formData.qty = newProductData.qty || 0;
-      formData.description = newProductData.description || "";
-      formData.status = newProductData.status?.toString() || "1"; // Ensure string
-      formData.existingImage = newProductData.image || null;
-      imagePreviewUrl.value = null; // Clear preview when loading existing
-      filterSubCategoriesLocal(); // Filter subcategories based on the initial category
+  () => props.show,
+  (newVal) => {
+    if (newVal) {
+      fetchModalData();
     } else {
-      // Set defaults for add mode (or if product is null)
-      formData.id = null;
-      formData.name = "";
-      formData.categoryId = "";
-      formData.subCategoryId = "";
-      formData.price = 0;
-      formData.qty = 0;
-      formData.description = "";
-      formData.status = "1";
-      formData.existingImage = null;
-      imagePreviewUrl.value = null;
-      localFilteredSubcategories.value = []; // Clear subcategories initially
+      resetForm();
     }
-  },
-  { immediate: true, deep: true } // immediate: true to run on initial load
+  }
 );
 
-// --- Form Handling ---
-
+// --- Methods ---
 const resetForm = () => {
-  Object.keys(formData).forEach((key) => {
-    if (key === "status") formData[key] = "1";
-    else if (key === "price" || key === "qty") formData[key] = 0;
-    else formData[key] = null;
-  });
-  formData.categoryId = "";
-  formData.subCategoryId = "";
-  imagePreviewUrl.value = null;
-  if (imageFileRef.value) {
-    imageFileRef.value.value = ""; // Reset file input visually
-  }
-  resetErrors();
-};
-
-const resetErrors = () => {
-  Object.keys(errors).forEach((key) => (errors[key] = ""));
+  formData.id = null;
+  formData.discountName = "";
+  formData.discountValue = 0;
+  formData.startDate = "";
+  formData.endDate = "";
+  formData.status = 1;
+  selectedProducts.value = [];
+  error.value = null;
   submitError.value = null;
-};
-
-const filterSubCategoriesLocal = () => {
-  if (!formData.categoryId) {
-    localFilteredSubcategories.value = [];
-  } else {
-    localFilteredSubcategories.value = props.subcategories.filter(
-      (subcat) => subcat.category?.id == formData.categoryId
-    );
-  }
-  // Reset subcategory selection if it's no longer valid
-  if (
-    !localFilteredSubcategories.value.some(
-      (sc) => sc.id == formData.subCategoryId
-    )
-  ) {
-    formData.subCategoryId = "";
-  }
-};
-
-// Update raw price from formatted input
-const updateRawPrice = (formattedValue) => {
-  formData.price = parseFormattedPrice(formattedValue);
-};
-
-const handleImageChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    // Basic validation (type, size)
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      errors.imageFile =
-        "Loại file không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF, WEBP.";
-      imagePreviewUrl.value = null;
-      formData.imageFile = null;
-      event.target.value = ""; // Clear the input
-      return;
-    }
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      errors.imageFile = "Kích thước file quá lớn (Tối đa 5MB).";
-      imagePreviewUrl.value = null;
-      formData.imageFile = null;
-      event.target.value = ""; // Clear the input
-      return;
-    }
-
-    errors.imageFile = ""; // Clear error
-    formData.imageFile = file;
-
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      imagePreviewUrl.value = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  } else {
-    formData.imageFile = null;
-    imagePreviewUrl.value = null;
-    errors.imageFile = ""; // Clear error if deselected
-  }
-};
-
-const setDefaultPreview = (event) => {
-  event.target.src = "/placeholder.png"; // Fallback if preview fails
+  isSubmitting.value = false;
 };
 
 const validateForm = () => {
-  resetErrors();
-  let isValid = true;
-
-  if (!formData.name) {
-    errors.name = "Tên sản phẩm không được để trống.";
-    isValid = false;
+  submitError.value = null;
+  if (!formData.discountName?.trim()) {
+    submitError.value = "Vui lòng nhập tên giảm giá.";
+    return false;
   }
-  if (!formData.categoryId) {
-    errors.categoryId = "Vui lòng chọn loại hàng.";
-    isValid = false;
+  if (!formData.startDate) {
+    submitError.value = "Vui lòng chọn ngày bắt đầu.";
+    return false;
   }
-  if (!formData.subCategoryId) {
-    errors.subCategoryId = "Vui lòng chọn hãng.";
-    isValid = false;
+  if (!formData.endDate) {
+    submitError.value = "Vui lòng chọn ngày kết thúc.";
+    return false;
   }
-  if (formData.price < 0 || typeof formData.price !== "number") {
-    errors.price = "Giá không hợp lệ.";
-    isValid = false;
+  if (new Date(formData.endDate) < new Date(formData.startDate)) {
+    submitError.value = "Ngày kết thúc không được trước ngày bắt đầu.";
+    return false;
   }
-  if (formData.qty < 0 || !Number.isInteger(formData.qty)) {
-    errors.qty = "Số lượng không hợp lệ.";
-    isValid = false;
-  }
-  if (formData.status !== "0" && formData.status !== "1") {
-    errors.status = "Trạng thái không hợp lệ.";
-    isValid = false;
-  }
-  // Image is optional for edit if existing image exists
-  if (!props.isEditMode && !formData.imageFile) {
-    // errors.imageFile = "Vui lòng chọn ảnh sản phẩm.";
-    // isValid = false;
-    // Make image optional for add mode as well, backend uses default
-  }
-
-  return isValid;
+  return true;
 };
 
-const saveProduct = async () => {
+const saveDiscount = async () => {
   if (!validateForm()) {
     return;
   }
@@ -493,55 +276,33 @@ const saveProduct = async () => {
   isSubmitting.value = true;
   submitError.value = null;
 
-  const productData = new FormData();
+  const discountData = {
+    id: isEditMode.value ? formData.id : 0,
+    discountName: formData.discountName,
+    discountValue: formData.discountValue,
+    startDate: formData.startDate,
+    endDate: formData.endDate,
+    status: formData.status,
+  };
 
-  // Append common fields
-  productData.append("name", formData.name);
-  productData.append("categoryId", formData.categoryId); // Send category ID
-  productData.append("subCategoryId", formData.subCategoryId); // Send subcategory ID
-  productData.append("price", formData.price.toString()); // Send price as string
-  productData.append("qty", formData.qty.toString());
-  productData.append("description", formData.description || "");
-  productData.append("status", formData.status);
+  const params = new URLSearchParams();
+  selectedProducts.value.forEach((prod) =>
+    params.append("productIds", prod.id)
+  );
 
-  // Append ID and image details based on mode
-  if (props.isEditMode) {
-    productData.append("id", formData.id.toString());
-    if (formData.imageFile) {
-      productData.append("imageFile", formData.imageFile);
-      productData.append("existingImage", formData.existingImage || ""); // Send existing even if new is uploaded, backend handles replacement
-    } else {
-      // If no new file, send the existing image name
-      productData.append("existingImage", formData.existingImage || "");
-      // Do not append imageFile if not changed
-    }
-  } else {
-    // Add mode - append image file if selected
-    if (formData.imageFile) {
-      productData.append("imageFile", formData.imageFile);
-    }
-    // No ID or existingImage needed for add mode
-  }
+  const url = isEditMode.value
+    ? `/discounts/edit/${formData.id}?${params.toString()}`
+    : `/discounts/create?${params.toString()}`;
+  const method = isEditMode.value ? "put" : "post";
 
   try {
-    // Use the single save endpoint
-    const response = await apiClient.post("/crud/products/save", productData, {
-      headers: {
-        // Axios automatically sets Content-Type for FormData
-      },
-    });
-
-    // Emit save event on success
-    emit(
-      "save",
-      response.data.message ||
-        (props.isEditMode ? "Cập nhật thành công!" : "Thêm thành công!")
-    );
-    closeModal(); // Close modal after successful save
-  } catch (error) {
-    console.error("Error saving product:", error);
+    const response = await apiClient[method](url, discountData);
+    emit("save", response.data.message || "Lưu thành công!");
+  } catch (err) {
+    console.error("Error saving discount:", err);
     submitError.value =
-      error.response?.data?.error || "Lỗi khi lưu sản phẩm. Vui lòng thử lại.";
+      "Lỗi khi lưu: " +
+      (err.response?.data?.error || err.response?.data?.message || err.message);
   } finally {
     isSubmitting.value = false;
   }
@@ -549,79 +310,81 @@ const saveProduct = async () => {
 
 const closeModal = () => {
   emit("close");
-  resetForm(); // Reset form state when closing
 };
 
-// --- Lifecycle Hooks (Optional) ---
-onMounted(() => {
-  // Initial setup if needed, though watcher handles most
-  filterSubCategoriesLocal();
-});
+const formatDateForInput = (dateString) => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateString, e);
+    return "";
+  }
+};
 </script>
 
 <style scoped>
-/* Scoped styles from UserModal, adjusted for products */
 .modal-content {
-  background: #ffffff; /* Light theme */
-  border: 1px solid #dee2e6;
-  color: #212529;
+  background: #222222;
+  border: 1px solid #d4af37;
 }
 
 .modal-header {
-  border-bottom: 1px solid #dee2e6;
-  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .modal-footer {
-  border-top: 1px solid #dee2e6;
-  background-color: #f8f9fa;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .modal-title {
-  color: #212529;
+  color: #d4af37;
 }
 
 .btn-close {
-  /* Default Bootstrap styling */
+  color: #d4af37;
+  opacity: 1;
+  filter: invert(1);
 }
 
 .form-label {
-  color: #495057;
-  font-weight: 500;
-  font-size: 0.9rem;
+  color: #d4af37;
 }
 
 .form-control,
 .form-select {
-  background: #fff;
-  border: 1px solid #ced4da;
-  color: #212529;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  background: #111111;
+  border: 1px solid #d4af37;
+  color: #fff;
 }
 
 .form-control:focus,
 .form-select:focus {
-  background: #fff;
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-  color: #212529;
+  background: #111111;
+  border-color: #b4941e;
+  box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+  color: #fff;
 }
 
 .form-select option {
-  background: #fff;
-  color: #212529;
+  background: #111111;
+  color: #fff;
 }
 
 .modal .btn-secondary {
-  background: #6c757d;
-  color: #fff;
-  border: 1px solid #6c757d;
+  background: #2c2c2c;
+  color: #d4af37;
+  border: 1px solid #d4af37;
 }
 
 .modal .btn-primary {
-  background: #0d6efd;
-  color: #fff;
-  border: 1px solid #0d6efd;
+  background: #d4af37;
+  color: #111111;
+  border: none;
 }
 
 .modal .btn-primary:hover,
@@ -630,30 +393,18 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
-.alert {
-  border-radius: 5px;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+.alert-danger {
+  font-size: 0.9em;
 }
 
-.product-image-preview {
-  max-width: 100%;
-  max-height: 150px;
-  margin-top: 10px;
-  border: 1px solid #dee2e6;
+.selection-summary {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  font-size: 0.9em;
 }
-
-.image-preview-container {
-  min-height: 50px; /* Ensure space even if no image */
-}
-
-.is-invalid {
-  border-color: #dc3545;
-}
-.invalid-feedback {
-  display: block; /* Make sure feedback is visible */
-  color: #dc3545;
-  font-size: 0.875em;
+.selection-summary strong {
+  color: #d4af37;
 }
 </style>
+
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>

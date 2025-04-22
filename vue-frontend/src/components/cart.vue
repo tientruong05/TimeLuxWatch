@@ -134,8 +134,8 @@
                   <span class="me-3"
                     >Tổng tiền:
                     <strong id="totalAmount"
-                      >{{ formatCurrency(totalAmount) }} VNĐ</strong
-                    ></span
+                      >{{ formatCurrency(totalAmount) }}
+                    </strong></span
                   >
                   <button
                     class="btn btn-primary"
@@ -153,7 +153,7 @@
           <div v-else class="text-center py-5">
             <p>Giỏ hàng trống</p>
             <div class="justify-content-between align-items-center m-2">
-              <router-link to="/index" class="btn-continue-shopping"
+              <router-link to="/" class="btn-continue-shopping"
                 >Tiếp Tục Mua Sắm</router-link
               >
             </div>
@@ -485,26 +485,22 @@ body {
   font-size: 1.1rem;
   font-weight: 500;
   color: var(--accent-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block; /* Thay đổi từ flex thành block để xuống dòng */
+  text-align: right;
 }
 
 .product-price .discount-price {
-  padding-left: 120px;
   color: var(--accent-color);
   font-weight: 600;
 }
 
 .product-price .original-price {
+  display: block; /* Đảm bảo giá gốc xuống dòng */
   text-decoration: line-through;
   color: #999;
   font-size: 0.9rem;
   font-weight: normal;
-}
-
-.product-price .currency {
-  font-size: 0.9rem;
+  margin-top: 4px; /* Khoảng cách nhỏ giữa hai giá */
 }
 
 .quantity-input {
@@ -662,7 +658,7 @@ body {
   }
   .product-price {
     font-size: 1rem;
-    flex-wrap: wrap;
+    text-align: center; /* Căn giữa trên mobile */
   }
   .quantity-input {
     width: 50px;
@@ -686,7 +682,7 @@ body {
     max-width: 100%;
   }
   .product-price {
-    justify-content: center;
+    text-align: center;
   }
   .btn-remove {
     margin-top: 10px;

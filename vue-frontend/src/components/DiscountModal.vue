@@ -79,33 +79,11 @@
 
             <!-- Selection Summary -->
             <div
-              v-if="
-                selectedCategories.length ||
-                selectedSubCategories.length ||
-                selectedProducts.length
-              "
+              v-if="selectedProducts.length"
               class="selection-summary mb-3 p-3 border rounded bg-dark"
             >
-              <h6 class="text-warning mb-2">Các mục đã chọn áp dụng:</h6>
-              <div v-if="selectedCategories.length">
-                <strong>Loại hàng:</strong>
-                <span
-                  v-for="cat in selectedCategories"
-                  :key="cat.id"
-                  class="badge bg-secondary me-1 mb-1"
-                  >{{ cat.name }}</span
-                >
-              </div>
-              <div v-if="selectedSubCategories.length" class="mt-2">
-                <strong>Hãng:</strong>
-                <span
-                  v-for="sub in selectedSubCategories"
-                  :key="sub.id"
-                  class="badge bg-info text-dark me-1 mb-1"
-                  >{{ subCategoryLabel(sub) }}</span
-                >
-              </div>
-              <div v-if="selectedProducts.length" class="mt-2">
+              <h6 class="text-warning mb-2">Sản phẩm áp dụng giảm giá:</h6>
+              <div>
                 <strong>Sản phẩm:</strong>
                 <span
                   v-for="prod in selectedProducts"
@@ -117,66 +95,12 @@
             </div>
             <!-- End Selection Summary -->
 
-            <h6 class="text-warning">Chọn để áp dụng giảm giá:</h6>
+            <h6 class="text-warning">Chọn sản phẩm để áp dụng giảm giá:</h6>
             <div class="mb-3">
-              <label class="form-label">Loại hàng (Category):</label>
-              <VueMultiselect
-                v-model="selectedCategories"
-                :options="allCategories"
-                :multiple="true"
-                :close-on-select="false"
-                :clear-on-select="false"
-                :preserve-search="true"
-                placeholder="Tìm hoặc chọn loại hàng"
-                label="name"
-                track-by="id"
-                :preselect-first="false"
-              >
-                <template #noResult>Không tìm thấy kết quả.</template>
-              </VueMultiselect>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Hãng (SubCategory):</label>
-              <VueMultiselect
-                v-model="selectedSubCategories"
-                :options="filteredSubCategories"
-                :multiple="true"
-                :close-on-select="false"
-                :clear-on-select="false"
-                :preserve-search="true"
-                placeholder="Tìm hoặc chọn hãng"
-                track-by="id"
-                :custom-label="subCategoryLabel"
-                :preselect-first="false"
-              >
-                <template #option="{ option }">
-                  {{ option.subCategoriesName }} ({{ option.category?.name }})
-                </template>
-                <template #tag="{ option, remove }">
-                  <span class="multiselect__tag">
-                    <span
-                      >{{ option.subCategoriesName }} ({{
-                        option.category?.name
-                      }})</span
-                    >
-                    <i
-                      aria-hidden="true"
-                      tabindex="1"
-                      class="multiselect__tag-icon"
-                      @click="remove(option)"
-                    ></i>
-                  </span>
-                </template>
-                <template #noResult>Không tìm thấy kết quả.</template>
-              </VueMultiselect>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Sản phẩm (Product):</label>
+              <label class="form-label">Sản phẩm:</label>
               <VueMultiselect
                 v-model="selectedProducts"
-                :options="filteredProducts"
+                :options="allProducts"
                 :multiple="true"
                 :close-on-select="false"
                 :clear-on-select="false"
@@ -242,61 +166,17 @@ const formData = reactive({
   status: 1,
 });
 
-const allCategories = ref([]);
-const allSubCategories = ref([]);
-const allProducts = ref([]); // Use ProductDTO structure {id, name, image, price, discountedPrice, discountPercentage, discounted}
-
-const selectedCategories = ref([]);
-const selectedSubCategories = ref([]);
+const allProducts = ref([]);
 const selectedProducts = ref([]);
 
 const isLoading = ref(false);
 const isSubmitting = ref(false);
-const error = ref(null); // For initial loading
-const submitError = ref(null); // For submission errors
+const error = ref(null);
+const submitError = ref(null);
 
 const isEditMode = computed(
   () => props.discountId !== null && props.discountId > 0
 );
-
-// --- Computed Properties for Filtering ---
-const filteredSubCategories = computed(() => {
-  if (selectedCategories.value.length === 0) {
-    return allSubCategories.value; // Show all if no category selected
-  }
-  const selectedCategoryIds = selectedCategories.value.map((cat) => cat.id);
-  return allSubCategories.value.filter(
-    (sub) => sub.category && selectedCategoryIds.includes(sub.category.id)
-  );
-});
-
-const filteredProducts = computed(() => {
-  const selectedCategoryIds = selectedCategories.value.map((cat) => cat.id);
-  const selectedSubCategoryIds = selectedSubCategories.value.map(
-    (sub) => sub.id
-  );
-
-  if (selectedCategoryIds.length === 0 && selectedSubCategoryIds.length === 0) {
-    return allProducts.value; // Show all if nothing selected
-  }
-
-  return allProducts.value.filter((prod) => {
-    // Check if product's subcategory's category is selected
-    const categoryMatch =
-      selectedCategoryIds.length > 0 &&
-      prod.subCategory?.category &&
-      selectedCategoryIds.includes(prod.subCategory.category.id);
-
-    // Check if product's subcategory is selected
-    const subCategoryMatch =
-      selectedSubCategoryIds.length > 0 &&
-      prod.subCategory &&
-      selectedSubCategoryIds.includes(prod.subCategory.id);
-
-    // Include product if it matches either selected category or selected subcategory
-    return categoryMatch || subCategoryMatch;
-  });
-});
 
 // --- Fetch Data ---
 const fetchModalData = async () => {
@@ -305,16 +185,12 @@ const fetchModalData = async () => {
   isLoading.value = true;
   error.value = null;
   submitError.value = null;
-  resetForm(); // Reset form and selections first
+  resetForm();
 
   try {
     const fetchId = isEditMode.value ? props.discountId : 0;
-    // Assuming GET /api/discounts/0 returns all lists needed for add mode
-    // and GET /api/discounts/{id} returns the discount + details + all lists for edit mode
-    const response = await apiClient.get(`/discounts/edit-data/${fetchId}`); // Using a potentially combined endpoint
+    const response = await apiClient.get(`/discounts/edit-data/${fetchId}`);
 
-    allCategories.value = response.data.allCategories || [];
-    allSubCategories.value = response.data.allSubCategories || [];
     allProducts.value = response.data.allProducts || [];
 
     if (isEditMode.value && response.data.discount) {
@@ -326,21 +202,13 @@ const fetchModalData = async () => {
       formData.endDate = formatDateForInput(discount.endDate);
       formData.status = discount.status;
 
-      // Map existing selections
-      selectedCategories.value = response.data.selectedCategories || [];
-      selectedSubCategories.value = response.data.selectedSubCategories || [];
       selectedProducts.value = response.data.selectedProducts || [];
-    } else if (!isEditMode.value) {
-      // Reset selections for add mode (already done in resetForm)
     }
   } catch (err) {
     console.error("Error fetching modal data:", err);
     error.value =
       "Lỗi khi tải dữ liệu cho modal: " +
       (err.response?.data?.error || err.message);
-    // Clear lists on error to prevent issues
-    allCategories.value = [];
-    allSubCategories.value = [];
     allProducts.value = [];
   } finally {
     isLoading.value = false;
@@ -354,55 +222,9 @@ watch(
     if (newVal) {
       fetchModalData();
     } else {
-      resetForm(); // Reset form when modal is hidden
+      resetForm();
     }
   }
-);
-
-// Watch for changes in selectedCategories to potentially clear selectedSubCategories/Products
-// This prevents keeping selections that are no longer relevant after changing the category
-watch(
-  selectedCategories,
-  (newVal, oldVal) => {
-    if (newVal.length < oldVal.length) {
-      // If a category was removed
-      const newCategoryIds = newVal.map((c) => c.id);
-      // Remove subcategories whose category is no longer selected
-      selectedSubCategories.value = selectedSubCategories.value.filter(
-        (sub) => sub.category && newCategoryIds.includes(sub.category.id)
-      );
-      // Products are handled by the computed property filter, but we might also
-      // want to explicitly clear product selections if their parent category/subcategory is removed.
-      // Let's filter selected products as well:
-      selectedProducts.value = selectedProducts.value.filter((prod) => {
-        const categoryMatch =
-          prod.subCategory?.category &&
-          newCategoryIds.includes(prod.subCategory.category.id);
-        const subCategoryMatch =
-          prod.subCategory &&
-          selectedSubCategories.value.some((s) => s.id === prod.subCategory.id);
-        return categoryMatch || subCategoryMatch;
-      });
-    }
-  },
-  { deep: true }
-);
-
-// Watch selectedSubCategories for similar cleanup
-watch(
-  selectedSubCategories,
-  (newVal, oldVal) => {
-    if (newVal.length < oldVal.length) {
-      // If a subcategory was removed
-      const newSubCategoryIds = newVal.map((s) => s.id);
-      // Filter selected products
-      selectedProducts.value = selectedProducts.value.filter(
-        (prod) =>
-          prod.subCategory && newSubCategoryIds.includes(prod.subCategory.id)
-      );
-    }
-  },
-  { deep: true }
 );
 
 // --- Methods ---
@@ -413,9 +235,6 @@ const resetForm = () => {
   formData.startDate = "";
   formData.endDate = "";
   formData.status = 1;
-  // Also reset selections
-  selectedCategories.value = [];
-  selectedSubCategories.value = [];
   selectedProducts.value = [];
   error.value = null;
   submitError.value = null;
@@ -440,7 +259,6 @@ const validateForm = () => {
     submitError.value = "Ngày kết thúc không được trước ngày bắt đầu.";
     return false;
   }
-  // Add more validation as needed
   return true;
 };
 
@@ -461,14 +279,7 @@ const saveDiscount = async () => {
     status: formData.status,
   };
 
-  // Prepare query parameters
   const params = new URLSearchParams();
-  selectedCategories.value.forEach((cat) =>
-    params.append("categoryIds", cat.id)
-  );
-  selectedSubCategories.value.forEach((sub) =>
-    params.append("subCategoryIds", sub.id)
-  );
   selectedProducts.value.forEach((prod) =>
     params.append("productIds", prod.id)
   );
@@ -479,7 +290,7 @@ const saveDiscount = async () => {
   const method = isEditMode.value ? "put" : "post";
 
   try {
-    const response = await apiClient[method](url, discountData); // Send discountData in body
+    const response = await apiClient[method](url, discountData);
     emit("save", response.data.message || "Lưu thành công!");
   } catch (err) {
     console.error("Error saving discount:", err);
@@ -495,7 +306,6 @@ const closeModal = () => {
   emit("close");
 };
 
-// Helper to format date string (YYYY-MM-DD) for input type="date"
 const formatDateForInput = (dateString) => {
   if (!dateString) return "";
   try {
@@ -506,15 +316,8 @@ const formatDateForInput = (dateString) => {
     return `${year}-${month}-${day}`;
   } catch (e) {
     console.error("Error formatting date:", dateString, e);
-    return ""; // Return empty if formatting fails
+    return "";
   }
-};
-
-const subCategoryLabel = (option) => {
-  if (option.category) {
-    return `${option.subCategoriesName} (Category: ${option.category.name})`;
-  }
-  return option.subCategoriesName;
 };
 </script>
 
@@ -586,14 +389,6 @@ const subCategoryLabel = (option) => {
 
 .alert-danger {
   font-size: 0.9em;
-}
-
-/* Style for multi-select boxes */
-.multi-select {
-  height: 150px; /* Adjust height as needed */
-}
-.multi-select option {
-  padding: 5px;
 }
 
 .selection-summary {
