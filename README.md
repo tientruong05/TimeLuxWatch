@@ -878,11 +878,178 @@ async login(username, password) {
 
 - Cấu hình CORS để chỉ cho phép frontend từ domain được chỉ định truy cập API
 
-## 13. Câu hỏi phỏng vấn Frontend cho vị trí Intern
+## 9. Tính năng Quản lý Ảnh và Hiển thị Sản phẩm
+
+### 9.1. Quản lý Đa Ảnh với Vue Draggable
+
+TimeLux Watch sử dụng thư viện **vuedraggable** để triển khai chức năng tải lên và quản lý nhiều ảnh cho mỗi sản phẩm trong trang quản trị.
+
+#### 9.1.1. Cấu trúc và Luồng Hoạt động
+
+1. **Cài đặt và Import Thư viện**:
+
+   ```javascript
+   import draggable from "vuedraggable";
+   ```
+
+2. **Quản lý State Ảnh**:
+
+   - `imagePreviews`: Mảng reactive chứa các đối tượng preview (hiển thị trong UI)
+   - `formData.imageFiles`: Mảng chứa các đối tượng File cho việc upload
+   - `formData.existingImage`: String lưu trữ thông tin ảnh hiện có khi chỉnh sửa
+
+3. **Luồng Upload Ảnh**:
+
+   - Người dùng chọn các file ảnh thông qua input file
+   - Method `handleImageChange` xử lý các file được chọn:
+     - Tạo URL.createObjectURL cho mỗi file để hiển thị preview
+     - Lưu trữ các file trong formData.imageFiles
+     - Cập nhật mảng imagePreviews với các URL preview
+
+4. **Kéo-thả để Sắp xếp**:
+
+   - Component `<draggable>` bao quanh các preview ảnh
+   - Người dùng có thể kéo-thả để thay đổi thứ tự các ảnh
+   - Method `onDragEnd` cập nhật thứ tự của `formData.imageFiles` để khớp với thứ tự mới sau khi kéo-thả
+   - Ảnh đầu tiên trong danh sách được đánh dấu là "Ảnh chính" và được hiển thị nổi bật
+
+5. **Lưu Nhiều Ảnh**:
+   - Khi submit form, tất cả các ảnh được gửi đến server qua FormData API
+   - Mỗi file được append vào FormData với cùng tên key "imageFiles"
+   ```javascript
+   formData.imageFiles.forEach((file) => {
+     payload.append("imageFiles", file);
+   });
+   ```
+   - Backend lưu trữ các ảnh và trả về chuỗi đường dẫn các ảnh được lưu, phân tách bằng dấu chấm phẩy
+
+#### 9.1.2. Tính năng Chính
+
+- **Tải lên nhiều ảnh**: Người dùng có thể chọn nhiều ảnh cùng lúc hoặc thêm ảnh mới vào danh sách hiện có
+- **Kéo-thả sắp xếp**: Dễ dàng thay đổi thứ tự ảnh bằng cách kéo-thả
+- **Xem trước ảnh**: Hiển thị thumbnail cho mỗi ảnh đã chọn
+- **Xóa ảnh**: Xóa từng ảnh riêng lẻ từ danh sách
+- **Ảnh chính**: Ảnh đầu tiên trong danh sách được đánh dấu là ảnh chính của sản phẩm
+- **Xử lý ảnh đã tồn tại**: Khi chỉnh sửa sản phẩm, các ảnh hiện có được hiển thị và có thể thay thế bằng ảnh mới
+
+### 9.2. Hiển thị Ảnh Sản phẩm với Swiper
+
+TimeLux Watch sử dụng thư viện **Swiper** để tạo gallery ảnh tương tác trong trang chi tiết sản phẩm.
+
+#### 9.2.1. Cấu trúc và Luồng Hoạt động
+
+1. **Cài đặt và Import Thư viện**:
+
+   ```javascript
+   import { Swiper, SwiperSlide } from "swiper/vue";
+   import { Navigation, Pagination } from "swiper/modules";
+   import "swiper/css";
+   import "swiper/css/navigation";
+   import "swiper/css/pagination";
+   ```
+
+2. **Xử lý Dữ liệu Ảnh**:
+
+   - `productImages`: Computed property xử lý chuỗi ảnh từ backend (phân tách bằng dấu chấm phẩy) thành mảng URL ảnh
+   - `currentImageIndex`: Ref track index của ảnh chính hiện tại
+   - `currentMainImage`: Computed property trả về URL của ảnh chính hiện tại
+
+3. **Cấu trúc Giao diện Gallery**:
+
+   - **Ảnh Chính**: Hiển thị ảnh hiện được chọn với kích thước lớn ở trên cùng
+   - **Thumbnail Slider**: Hiển thị các ảnh thumbnail dưới ảnh chính, sử dụng Swiper
+
+   ```html
+   <swiper
+     :modules="swiperModules"
+     :slides-per-view="4"
+     :space-between="10"
+     :navigation="true"
+     :pagination="{ clickable: true }"
+     class="thumbnail-swiper"
+   >
+     <swiper-slide
+       v-for="(image, index) in productImages"
+       :key="`thumb-${index}`"
+       :class="{ active: currentImageIndex === index }"
+       @click="setMainImage(index)"
+     >
+       <!-- Thumbnail image -->
+     </swiper-slide>
+   </swiper>
+   ```
+
+4. **Tương tác Người dùng**:
+   - Người dùng nhấp vào thumbnail để thay đổi ảnh chính (thông qua method `setMainImage`)
+   - Sử dụng navigation buttons của Swiper để cuộn qua các thumbnails khi có nhiều ảnh
+   - Xử lý lỗi tải ảnh với method `setDefaultImage` để hiển thị ảnh placeholder thay thế
+
+#### 9.2.2. Tính năng Chính của Gallery Ảnh
+
+- **Hiển thị nhiều ảnh**: Hỗ trợ hiển thị nhiều ảnh cho một sản phẩm
+- **Thumbnail navigation**: Dễ dàng chuyển đổi giữa các ảnh qua thumbnails
+- **Responsive**: Gallery tự điều chỉnh để hiển thị tốt trên các thiết bị khác nhau
+- **Điều hướng mượt mà**: Nút điều hướng và pagination giúp người dùng dễ dàng duyệt qua ảnh
+- **Xử lý lỗi**: Hiển thị ảnh placeholder khi ảnh không tải được
+- **Badge giảm giá**: Hiển thị badge phần trăm giảm giá trên ảnh chính khi sản phẩm có khuyến mãi
+
+### 9.3. Tích hợp Giữa Upload và Hiển thị
+
+1. **Lưu trữ nhất quán**:
+
+   - Backend lưu ảnh dưới dạng chuỗi đường dẫn phân tách bằng dấu chấm phẩy
+   - Ví dụ: "image1.jpg;image2.jpg;image3.jpg"
+
+2. **Xử lý chuỗi ảnh**:
+
+   - Trang quản lý phân tích chuỗi ảnh để hiển thị các ảnh hiện có khi chỉnh sửa
+   - Trang chi tiết sản phẩm phân tích cùng định dạng chuỗi để hiển thị gallery
+   - Cả hai trang đều xử lý một cách nhất quán các đường dẫn tương đối và URLs đầy đủ
+
+   #### Cơ chế lưu trữ và xử lý chuỗi ảnh
+
+   **a. Định dạng chuỗi ảnh:**
+
+   - Hệ thống lưu trữ nhiều ảnh sản phẩm trong một trường `image` dạng chuỗi text
+   - Các tên file được phân tách bằng dấu chấm phẩy (`;`). Ví dụ: `"watch1.jpg;watch2.jpg;watch3.png"`
+   - Định dạng này cho phép lưu nhiều ảnh mà không cần tạo bảng quan hệ phức tạp
+   - Thứ tự ảnh trong chuỗi được bảo toàn, với ảnh đầu tiên luôn được coi là ảnh chính
+
+   **b. Xử lý trong Admin Panel (ProductAddEditModal.vue):**
+
+   - Khi chỉnh sửa sản phẩm, chuỗi ảnh được tách thành các file riêng biệt
+   - Hệ thống kiểm tra định dạng với regex cho các định dạng ảnh hỗ trợ (.jpg, .jpeg, .png, .gif, .webp)
+   - Mỗi ảnh được chuyển thành URL đầy đủ để hiển thị preview
+   - Người dùng có thể thêm, xóa và sắp xếp lại ảnh với vuedraggable
+   - Khi lưu, thứ tự ảnh được bảo toàn và gửi đến server dưới dạng FormData multipart
+
+   **c. Xử lý trong Frontend (ProductDetailPage.vue):**
+
+   - Trang chi tiết sản phẩm nhận chuỗi ảnh từ API response
+   - Chuỗi được phân tích với cùng logic, tách thành mảng URL đầy đủ
+   - Swiper sử dụng các URL này để tạo gallery ảnh có thể điều hướng
+   - Ảnh đầu tiên trong chuỗi tự động được hiển thị là ảnh chính
+
+   **d. Xử lý lỗi và tương thích:**
+
+   - Validation client-side và server-side cho định dạng file hợp lệ
+   - Hệ thống dự phòng với ảnh placeholder khi không tìm thấy hoặc lỗi tải ảnh
+   - Xử lý đặc biệt cho trường hợp ảnh đơn (không có dấu `;`)
+   - Try/catch blocks để đảm bảo ứng dụng không bị crash khi xử lý chuỗi không hợp lệ
+
+   **e. API Endpoints xử lý ảnh:**
+
+   - `/crud/products/save-with-multiple-images`: Xử lý upload nhiều ảnh
+   - Backend tự động tạo chuỗi từ danh sách file được gửi lên
+   - Trong trường hợp chỉnh sửa, kết hợp với chuỗi `existingImage` nếu người dùng giữ lại ảnh cũ
+
+Việc kết hợp vuedraggable cho upload và Swiper cho hiển thị tạo ra một trải nghiệm người dùng toàn diện - quản trị viên có thể dễ dàng quản lý nhiều ảnh và sắp xếp thứ tự hiển thị, trong khi khách hàng được trải nghiệm xem sản phẩm với gallery ảnh trực quan và tương tác.
+
+## 10. Câu hỏi phỏng vấn Frontend cho vị trí Intern
 
 Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuyển vị trí Intern Frontend liên quan đến dự án TimeLux Watch. Các câu hỏi được chia theo chủ đề và đi kèm với gợi ý câu trả lời.
 
-### 13.1. Vue.js cơ bản
+### 10.1. Vue.js cơ bản
 
 **Q1: Vue.js 3 khác gì so với Vue.js 2?**
 
@@ -915,7 +1082,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Cách tổ chức này giúp phân tách rõ ràng giữa các components có thể tái sử dụng và các trang cụ thể.
 
-### 13.2. Quản lý trạng thái với Pinia
+### 10.2. Quản lý trạng thái với Pinia
 
 **Q4: Pinia là gì và tại sao dự án sử dụng Pinia thay vì Vuex?**
 
@@ -963,7 +1130,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Lưu ý việc sử dụng `storeToRefs` khi destructuring các properties từ store để giữ tính reactive.
 
-### 13.3. Routing với Vue Router
+### 10.3. Routing với Vue Router
 
 **Q7: Giải thích cách Vue Router được cấu hình trong dự án này.**
 
@@ -1014,7 +1181,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > TimeLux Watch sử dụng cả ba cách, tùy theo trường hợp cụ thể.
 
-### 13.4. HTTP Requests với Axios
+### 10.4. HTTP Requests với Axios
 
 **Q10: Tại sao dự án sử dụng Axios thay vì Fetch API?**
 
@@ -1049,7 +1216,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Interceptors giúp xử lý logic chung cho tất cả các requests/responses mà không cần lặp lại code ở mỗi nơi gọi API.
 
-### 13.5. Quản lý dữ liệu và reactive
+### 10.5. Quản lý dữ liệu và reactive
 
 **Q13: Trong Vue 3, có những cách nào để tạo reactive data?**
 
@@ -1103,7 +1270,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Trong TimeLux Watch, computed properties được sử dụng trong components và cũng trong Pinia stores (getters).
 
-### 13.6. Components và Component Communication
+### 10.6. Components và Component Communication
 
 **Q16: Các cách để components giao tiếp với nhau trong Vue.js?**
 
@@ -1178,7 +1345,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Trong TimeLux Watch, forms được xử lý chủ yếu với v-model kết hợp với các hàm validation tùy chỉnh.
 
-### 13.7. Performance Optimization
+### 10.7. Performance Optimization
 
 **Q19: Làm thế nào để tối ưu hiệu suất trong ứng dụng Vue.js?**
 
@@ -1219,6 +1386,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >    - Sử dụng `v-once` cho static content
 >
 > 7. **Bundle analysis**:
+>
 >    - Sử dụng bundle analyzer để tìm và giảm kích thước bundle
 >
 > Những cải tiến này có thể giúp TimeLux Watch tải nhanh hơn và cung cấp trải nghiệm người dùng mượt mà hơn.
@@ -1234,7 +1402,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Quá trình này giảm thiểu DOM manipulations, vốn tốn kém về mặt hiệu suất. Vue.js 3 có thuật toán diff được cải tiến so với Vue 2, dẫn đến hiệu suất tốt hơn.
 
-### 13.8. Authentication và Security
+### 10.8. Authentication và Security
 
 **Q21: TimeLux Watch xử lý authentication như thế nào?**
 
@@ -1283,7 +1451,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > TimeLux Watch kết hợp cả hai cách này để bảo vệ các routes như profile, cart, checkout.
 
-### 13.9. Error Handling
+### 10.9. Error Handling
 
 **Q23: Làm thế nào để xử lý lỗi trong các API calls?**
 
@@ -1352,7 +1520,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Trong TimeLux Watch, sử dụng kết hợp Vue DevTools và Browser DevTools là cách hiệu quả nhất để debug issues.
 
-### 13.10. Responsive Design
+### 10.10. Responsive Design
 
 **Q25: Làm thế nào mà TimeLux Watch đảm bảo giao diện responsive?**
 
@@ -1402,7 +1570,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > TimeLux Watch sử dụng kết hợp cả hai: Flexbox cho component layouts và Grid (thông qua Bootstrap grid) cho page layouts.
 
-### 13.11. Build & Deploy
+### 10.11. Build & Deploy
 
 **Q27: Vite là gì và tại sao dự án sử dụng Vite thay vì Webpack?**
 
@@ -1453,7 +1621,7 @@ Dưới đây là các câu hỏi phỏng vấn có thể xảy ra khi ứng tuy
 >
 > Đối với TimeLux Watch, quá trình build tạo ra các static files có thể được host trên bất kỳ web server nào.
 
-### 13.12. Câu hỏi thực hành
+### 10.12. Câu hỏi thực hành
 
 **Q29: Làm thế nào để thêm một trang chi tiết sản phẩm mới vào dự án?**
 
